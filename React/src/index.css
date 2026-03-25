@@ -1,0 +1,110 @@
+/* Basic CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Base Dark Theme Overrides for utilities (when :root is active) */
+:root {
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus: rgba(255, 255, 255, 0.03);
+  --table-border: rgba(255, 255, 255, 0.05);
+  --table-header-bg: rgba(0, 0, 0, 0.2);
+  --filter-chip-bg: rgba(0, 0, 0, 0.3);
+  --card-bg-solid: rgba(15, 20, 35, 0.4);
+  --glass-popup: rgba(15, 20, 35, 0.55);
+  --glass-popup-inner: rgba(255, 255, 255, 0.05);
+  --modal-card-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* Light Theme Variables */
+[data-theme='light'] {
+  /* Simple, Clean, Smooth Palette */
+  --bg-primary: #f8fafc;      /* Milky white */
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --glass-bg: rgba(255, 255, 255, 0.5); /* Smoother glass */
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --accent-primary: #2563eb; 
+  --accent-secondary: #0ea5e9; 
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --cyber-grid: rgba(37, 99, 235, 0.03);
+
+  /* Auth Colors (Merging) */
+  --bg-card: #ffffff;
+  --accent-glow: #3b82f6;
+  --glow-color: rgba(37, 99, 235, 0.1);
+  --error-color: #ef4444;
+  --heading-color: #0f172a; /* For headers in light mode */
+  
+  /* Utilities for replacing inline styles */
+  --input-bg: rgba(255, 255, 255, 0.8);
+  --input-border: rgba(0, 0, 0, 0.1);
+  --input-focus: rgba(37, 99, 235, 0.05);
+  --table-border: rgba(0, 0, 0, 0.05);
+  --table-header-bg: rgba(0, 0, 0, 0.03);
+  --filter-chip-bg: rgba(0, 0, 0, 0.03);
+  --card-bg-solid: #ffffff;
+  --glass-popup: rgba(255, 255, 255, 0.15);
+  --glass-popup-inner: rgba(255, 255, 255, 0.25);
+  --modal-card-bg: rgba(0, 0, 0, 0.03);
+}
+
+/* Standardized Component Classes for Inline Style Replacements */
+.theme-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-main) !important;
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.3s;
+}
+.theme-input:focus {
+  background: var(--input-focus) !important;
+  border-color: var(--accent-secondary) !important;
+}
+.theme-select {
+  background: var(--filter-chip-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-main) !important;
+  outline: none;
+  border-radius: 6px;
+}
+.theme-select option {
+  color: #000; 
+}
+.theme-row-border {
+  border-bottom: 1px solid var(--table-border) !important;
+}
+.theme-row-border:hover {
+  background: var(--table-header-bg) !important;
+}
+.theme-header-bg {
+  background: var(--table-header-bg) !important;
+  border-bottom: 1px solid var(--table-border) !important;
+}
+.theme-card-bg {
+  background: var(--card-bg-solid) !important;
+}
+.text-muted {
+  color: var(--text-muted) !important;
+}
+.theme-flex-filter {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: var(--filter-chip-bg) !important;
+  padding: 8px 15px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--input-border) !important;
+}

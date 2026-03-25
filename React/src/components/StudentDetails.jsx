@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, User, FileText, FolderOpen, Mail, Phone, MapPin, Eraser, X, UploadCloud, Eye, AlertTriangle, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
+import { ArrowLeft, Save, User, FileText, FolderOpen, Mail, Phone, MapPin, Eraser, X, UploadCloud, Eye, AlertTriangle, ChevronLeft, ChevronRight, Globe, Briefcase } from 'lucide-react';
 import Select from 'react-select';
 import { Country, State, City } from 'country-state-city';
 import DatePicker from 'react-datepicker';

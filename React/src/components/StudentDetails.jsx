@@ -1090,130 +1090,146 @@ const StudentDetails = ({ student, goBack }) => {
         </div>
       )}
 
+
       {showSummaryModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', backdropFilter: 'blur(10px)' }}>
-          <div style={{ background: 'var(--card-bg-solid)', backdropFilter: 'blur(25px)', width: '85%', maxWidth: '1400px', height: '85vh', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)' }}>
+        <div className="premium-modal-overlay">
+          <div className="premium-modal-container">
             {!isSubmitted ? (
               <>
-                <div style={{ padding: '12px 25px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'transparent' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '25px', flex: 1 }}>
-                    <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.8rem', fontWeight: 900, whiteSpace: 'nowrap' }}>Final Review & Submission</h2>
-                    <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 15px', borderRadius: '10px', color: '#f87171', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.4 }}>
-                      <AlertTriangle size={16} style={{ flexShrink: 0 }} /> 
-                      <span><strong style={{ fontWeight: 800 }}>Attention:</strong> After submission, your profile and documents cannot be modified. Ensure all information is accurate before proceeding.</span>
+                {/* Modal Header */}
+                <div style={{ padding: '20px 30px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
+                    <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.5px' }}>Final Review</h2>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '8px 16px', borderRadius: '12px', color: '#f87171', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.4, maxWidth: '600px' }}>
+                      <AlertTriangle size={18} style={{ flexShrink: 0 }} /> 
+                      <span>Data locking in progress. Please verify all details before final transmission. Changes are not permitted post-submission.</span>
                     </div>
-                    {hasAttachmentsWarning && (
-                      <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', padding: '6px 15px', borderRadius: '10px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: 800 }}>
-                        <AlertTriangle size={16} /> NO DOCUMENTS
-                      </div>
-                    )}
                   </div>
-                  <button onClick={() => setShowSummaryModal(false)} style={{ background: 'var(--input-bg)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={24} /></button>
+                  <button onClick={() => setShowSummaryModal(false)} style={{ background: 'var(--input-bg)', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '10px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-text-main"><X size={24} /></button>
                 </div>
 
-                <div style={{ padding: '15px 25px', overflowY: 'auto', flex: 1, color: 'var(--text-main)', display: 'flex', gap: '20px' }}>
-                  {/* Left Column: Info Cards Grid */}
-                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px', alignContent: 'start' }}>
+                {/* Modal Body */}
+                <div style={{ padding: '25px', overflowY: 'auto', flex: 1, display: 'flex', gap: '25px' }} className="modal-scroll-area">
+                  {/* Left Column: Semantic Info Cards */}
+                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignContent: 'start' }}>
 
-                    {/* Personal Profile */}
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><User size={18} /> PERSONAL PROFILE</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Full Name:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.firstName} {formData.middleName} {formData.lastName}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Email:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.email}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Contact:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.phone}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>DOB:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.dob ? new Date(formData.dob).toLocaleDateString() : 'N/A'}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Gender:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.gender}</span></div>
-                        <div style={{ marginTop: '8px', borderTop: '1px dashed var(--glass-border)', paddingTop: '8px' }}>
-                          <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Alternative Contact:</span>
-                          <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.altContactName || 'N/A'} {formData.altContactPhone ? `(${formData.altContactPhone})` : ''} - {formData.altContactRelation || 'N/A'}</span>
+                    {/* Personal Card */}
+                    <div className="premium-card">
+                      <h3><User size={18} strokeWidth={2.5} /> Identity Profile</h3>
+                      <div className="data-group">
+                        <div className="data-item"><span className="data-label">Full Name</span><span className="data-value">{formData.firstName} {formData.middleName} {formData.lastName}</span></div>
+                        <div className="data-item"><span className="data-label">Email</span><span className="data-value">{formData.email}</span></div>
+                        <div className="data-item"><span className="data-label">Primary Mobile</span><span className="data-value">{formData.phone}</span></div>
+                        <div className="data-item"><span className="data-label">Date of Birth</span><span className="data-value">{formData.dob ? new Date(formData.dob).toLocaleDateString() : 'N/A'}</span></div>
+                        <div className="data-item"><span className="data-label">Gender</span><span className="data-value">{formData.gender || 'N/A'}</span></div>
+                        <div style={{ marginTop: '5px', paddingTop: '12px', borderTop: '1px dashed var(--glass-border)' }}>
+                          <span className="data-label" style={{ display: 'block', marginBottom: '8px' }}>Alternative Emergency Contact</span>
+                          <span className="data-value" style={{ textAlign: 'left', margin: 0, fontSize: '0.85rem' }}>{formData.altContactName || 'None'} {formData.altContactPhone ? `| ${formData.altContactPhone}` : ''}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Passport & Nationality */}
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><Globe size={18} /> PASSPORT & NATIONALITY</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Passport No:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.passportNo || 'N/A'}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Issue/Expiry:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.issueDate || 'N/A'} - {formData.expiryDate || 'N/A'}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Nationality:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{getCountryLabel(formData.nationality)?.label || formData.nationality || 'N/A'}</span></div>
-                        <div><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Citizenship:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{getCountryLabel(formData.citizenship)?.label || formData.citizenship || 'N/A'}</span></div>
+                    {/* Passport Card */}
+                    <div className="premium-card">
+                      <h3><Globe size={18} strokeWidth={2.5} /> Global Status</h3>
+                      <div className="data-group">
+                        <div className="data-item"><span className="data-label">Passport Number</span><span className="data-value" style={{ letterSpacing: '1px' }}>{formData.passportNo || 'N/A'}</span></div>
+                        <div className="data-item"><span className="data-label">Validity Period</span><span className="data-value">{formData.issueDate || 'N/A'} — {formData.expiryDate || 'N/A'}</span></div>
+                        <div className="data-item"><span className="data-label">Primary Nationality</span><span className="data-value">{getCountryLabel(formData.nationality)?.label || formData.nationality || 'N/A'}</span></div>
+                        <div className="data-item"><span className="data-label">Citizenship</span><span className="data-value">{getCountryLabel(formData.citizenship)?.label || formData.citizenship || 'N/A'}</span></div>
                       </div>
                     </div>
 
-                    {/* Address Details */}
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><MapPin size={18} /> ADDRESS DETAILS</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>Mailing Address:</span>
-                          <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{[formData.mailingAddress1, formData.mailingAddress2, formData.mailingCity, formData.mailingState, getCountryLabel(formData.mailingCountry)?.label || formData.mailingCountry, formData.mailingPincode].filter(Boolean).join(', ') || 'N/A'}</span>
+                    {/* Address Card */}
+                    <div className="premium-card">
+                      <h3><MapPin size={18} strokeWidth={2.5} /> Residential Data</h3>
+                      <div className="data-group">
+                        <div style={{ marginBottom: '10px' }}>
+                          <span className="data-label" style={{ display: 'block', marginBottom: '5px' }}>Communication Address</span>
+                          <span className="data-value" style={{ textAlign: 'left', margin: 0, fontSize: '0.85rem', lineHeight: '1.5' }}>{[formData.mailingAddress1, formData.mailingAddress2, formData.mailingCity, formData.mailingState, getCountryLabel(formData.mailingCountry)?.label, formData.mailingPincode].filter(Boolean).join(', ') || 'N/A'}</span>
                         </div>
-                        <div style={{ marginTop: '4px', borderTop: '1px dashed var(--glass-border)', paddingTop: '4px' }}>
-                          <span style={{ color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>Permanent Address:</span>
-                          <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{[formData.permanentAddress1, formData.permanentAddress2, formData.permanentCity, formData.permanentState, getCountryLabel(formData.permanentCountry)?.label || formData.permanentCountry, formData.permanentPincode].filter(Boolean).join(', ') || 'N/A'}</span>
+                        <div style={{ paddingTop: '10px', borderTop: '1px dashed var(--glass-border)' }}>
+                          <span className="data-label" style={{ display: 'block', marginBottom: '5px' }}>Permanent Domicile</span>
+                          <span className="data-value" style={{ textAlign: 'left', margin: 0, fontSize: '0.85rem', lineHeight: '1.5' }}>{[formData.permanentAddress1, formData.permanentAddress2, formData.permanentCity, formData.permanentState, getCountryLabel(formData.permanentCountry)?.label, formData.permanentPincode].filter(Boolean).join(', ') || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Academic Record */}
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><FileText size={18} /> ACADEMIC RECORD</h3>
-                      <div style={{ marginBottom: '10px', fontSize: '0.85rem' }}><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Highest:</span> <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{formData.highestLevelOfEducation || 'N/A'}</span></div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(formData.educationHistory || []).map((edu, idx) => {
-                          if (!(edu.programName || edu.universityName)) return null;
-                          return (
-                            <div key={idx} style={{ background: 'var(--input-bg)', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', border: '1px solid var(--glass-border)' }}>
-                              <div style={{ fontWeight: 800, color: 'var(--text-main)' }}>{edu.level}</div>
-                              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{edu.programName || 'N/A'}</div>
-                            </div>
-                          );
-                        })}
+                    {/* Academic Card */}
+                    <div className="premium-card">
+                      <h3><FileText size={18} strokeWidth={2.5} /> Academic Background</h3>
+                      <div className="data-group">
+                        <div className="data-item"><span className="data-label">Highest Degree</span><span className="data-value">{formData.highestLevelOfEducation || 'N/A'}</span></div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '5px' }}>
+                          {(formData.educationHistory || []).map((edu, idx) => {
+                            if (!(edu.programName || edu.universityName)) return null;
+                            return (
+                              <div key={idx} style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.8rem' }}>{edu.level}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{edu.programName || 'Unknown Program'} | {edu.universityName || 'Unknown University'}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Work History */}
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><FolderOpen size={18} /> WORK HISTORY</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(formData.workExperience || []).filter(w => w.organisationName || w.position).length > 0 ? formData.workExperience.filter(w => w.organisationName || w.position).map((work, idx) => (
-                          <div key={idx} style={{ background: 'var(--input-bg)', padding: '10px', borderRadius: '10px', fontSize: '0.8rem', border: '1px solid var(--glass-border)' }}>
-                            <div style={{ fontWeight: 800, color: 'var(--text-main)' }}>{work.position || 'Role'}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{work.organisationName || 'N/A'}</div>
+                    {/* Work Card */}
+                    <div className="premium-card">
+                      <h3><Briefcase size={18} strokeWidth={2.5} /> Professional History</h3>
+                      <div className="data-group">
+                        {(formData.workExperience || []).filter(w => w.organisationName || w.position).length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {formData.workExperience.filter(w => w.organisationName || w.position).map((work, idx) => (
+                              <div key={idx} style={{ background: 'var(--input-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.8rem' }}>{work.position || 'Professional Role'}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{work.organisationName || 'N/A'}</div>
+                              </div>
+                            ))}
                           </div>
-                        )) : <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No work experience.</div>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Verified Documents Sidebar */}
-                  <div style={{ width: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ background: 'var(--modal-card-bg)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <h3 style={{ color: 'var(--accent-secondary)', marginTop: 0, marginBottom: '15px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}><UploadCloud size={18} /> VERIFIED DOCUMENTS</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '5px' }}>
-                        {attachedDocsPreview.length > 0 ? attachedDocsPreview.map((doc, idx) => (
-                          <div key={idx} style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.label}</div>
-                              <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.fileName}</div>
-                            </div>
-                            <button type="button" onClick={() => documentUploadRef.current?.triggerPreview(doc.id)} style={{ background: 'rgba(2, 132, 199, 0.1)', border: '1px solid rgba(2, 132, 199, 0.2)', color: 'var(--accent-secondary)', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}>
-                              <Eye size={12} /> VIEW
-                            </button>
-                          </div>
-                        )) : (
-                          <div style={{ color: '#ef4444', padding: '15px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.2)', fontWeight: 700, fontSize: '0.85rem' }}>NO DOCUMENTS</div>
+                        ) : (
+                          <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'center', padding: '10px' }}>No professional experience recorded.</div>
                         )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Right Column: Documents Sidebar */}
+                  <div style={{ width: '400px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                    <div className="premium-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      <h3><UploadCloud size={18} strokeWidth={2.5} /> Verified Attachments</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '8px' }}>
+                        {attachedDocsPreview.length > 0 ? attachedDocsPreview.map((doc, idx) => (
+                          <div key={idx} className="doc-list-item">
+                            <div className="doc-info">
+                              <div className="doc-icon-wrap"><FileText size={16} /></div>
+                              <div style={{ minWidth: 0 }}>
+                                <div className="doc-name-main">{doc.label}</div>
+                                <div className="doc-name-sub">{doc.fileName}</div>
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => documentUploadRef.current?.triggerPreview(doc.id)} style={{ background: 'rgba(14, 165, 233, 0.1)', border: '1px solid rgba(14, 165, 233, 0.2)', color: 'var(--accent-secondary)', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', fontWeight: 800, transition: 'all 0.2s' }} className="hover-glow">
+                              <Eye size={12} /> VIEW
+                            </button>
+                          </div>
+                        )) : (
+                          <div style={{ color: '#f87171', padding: '30px 20px', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '16px', border: '1px dashed rgba(239, 68, 68, 0.5)', fontWeight: 800, fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                            <AlertTriangle size={32} />
+                            NO DOCUMENTS ATTACHED
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                        All documents displayed above will be encrypted and transmitted to the central server upon confirmation.
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ padding: '10px 30px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button type="button" onClick={() => setShowSummaryModal(false)} className="btn-save" style={{ padding: '10px 24px', background: 'var(--input-bg)', color: 'var(--text-muted)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem' }}>
-                    GO BACK & EDIT
+                {/* Modal Footer Actions */}
+                <div style={{ padding: '20px 40px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                  <button type="button" onClick={() => setShowSummaryModal(false)} className="btn-cancel" style={{ padding: '12px 28px', borderRadius: '14px', fontWeight: 800, fontSize: '0.9rem' }}>
+                    RETURN TO EDITOR
                   </button>
                   <button
                     type="button"
@@ -1229,24 +1245,26 @@ const StudentDetails = ({ student, goBack }) => {
                       }
                     }}
                     className="btn-save"
-                    style={{ padding: '14px 45px', fontSize: '1.05rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 900, letterSpacing: '0.5px', boxShadow: '0 8px 12px -3px rgba(16, 185, 129, 0.25)' }}
+                    style={{ padding: '16px 60px', fontSize: '1.1rem', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 950, letterSpacing: '0.5px', boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)' }}
                   >
-                    FINAL SUBMIT & LOCK
+                    CONFIRM & SUBMIT PORTAL
                   </button>
                 </div>
               </>
             ) : (
-              <div style={{ padding: '60px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-main)' }}>
-                <div style={{ fontSize: '7rem', marginBottom: '25px', filter: 'drop-shadow(0 0 30px rgba(16, 185, 129, 0.2))' }}>✅</div>
-                <h1 style={{ fontSize: '3rem', marginBottom: '15px', fontWeight: 950, color: 'var(--text-main)' }}>Submission Successful!</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', marginBottom: '35px', maxWidth: '600px', lineHeight: 1.6 }}>Your academic credentials have been verified and securely transmitted.</p>
-                <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid #10b981', padding: '20px 35px', borderRadius: '15px', color: '#10b981', fontSize: '1.1rem', marginBottom: '45px', fontWeight: 700 }}>
-                  A confirmation packet has been dispatched to <u>{formData.email}</u>.
+              <div style={{ padding: '80px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-main)' }}>
+                <div style={{ width: '120px', height: '120px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '30px', border: '2px solid #10b981', boxShadow: '0 0 40px rgba(16, 185, 129, 0.2)' }}>
+                  <div style={{ fontSize: '4.5rem' }}>✅</div>
+                </div>
+                <h1 style={{ fontSize: '3.2rem', marginBottom: '15px', fontWeight: 950, letterSpacing: '-1.5px' }}>Application Locked.</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', marginBottom: '25px', maxWidth: '650px', lineHeight: 1.6 }}>Your academic credentials have been verified and securely transmitted to the partner network.</p>
+                <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '15px 30px', borderRadius: '16px', color: '#10b981', fontSize: '1rem', fontWeight: 800, marginBottom: '45px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                  Confirmation packet dispatched to: <span style={{ textDecoration: 'underline' }}>{formData.email}</span>
                 </div>
                 <button
                   onClick={goBack}
                   className="btn-save"
-                  style={{ padding: '15px 60px', fontSize: '1.2rem', background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', color: '#fff', border: 'none', borderRadius: '15px', fontWeight: 800 }}
+                  style={{ padding: '18px 80px', fontSize: '1.2rem', background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', color: '#fff', border: 'none', borderRadius: '18px', fontWeight: 900, boxShadow: '0 10px 30px rgba(37, 99, 235, 0.3)' }}
                 >
                   RETURN TO DASHBOARD
                 </button>
@@ -1255,6 +1273,7 @@ const StudentDetails = ({ student, goBack }) => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

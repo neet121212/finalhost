@@ -1,8 +1,8 @@
 {
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix React\"",
-    "install:all": "npm install --prefix backend && npm install --prefix React",
-    "build": "npm run build --prefix React",
+    "postinstall": "npm install --prefix backend",
+    "build": "echo 'React app already compiled and pushed via GitHub. Skipping build.'",
     "start": "node backend/server.js"
   },
   "dependencies": {

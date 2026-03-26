@@ -221,9 +221,11 @@ router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
             ]
         };
 
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully!');
-        res.status(200).json({ message: 'Email sent successfully with ZIP attachment!' });
+        transporter.sendMail(mailOptions)
+            .then(() => console.log('Email sent successfully in background!'))
+            .catch(err => console.error('Email sending error in background:', err));
+            
+        res.status(200).json({ message: 'Email sequence started in background with ZIP attachment!' });
 
     } catch (err) {
         console.error('Detailed Email sending error:', err);

@@ -1,8 +1,8 @@
 require('dns').setServers(['8.8.8.8']);
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path');
 const cors = require('cors');
 
 const app = express();
@@ -12,7 +12,11 @@ app.use(express.json()); // Allows server to read JSON data
 app.use(cors());
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+if (!process.env.MONGO_URI) {
+  console.error("FATAL ERROR: MONGO_URI is completely undefined. The database cannot connect.");
+}
+
+mongoose.connect(process.env.MONGO_URI || '', { serverSelectionTimeoutMS: 5000 })
   .then(async () => {
     console.log('Connected to database');
     try {

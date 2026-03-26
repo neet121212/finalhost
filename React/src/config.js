@@ -1,10 +1,6 @@
-// Configuration file for centralized domain management
-// When deploying to a unified server (like Hostinger Node.js Web App), 
-// the React frontend and Node API run on the exact same domain.
-// Vite detects 'development' mode locally vs 'production' when built.
+// Runtime domain evaluation natively bypasses Vite environment bugs
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-const isDeveloment = import.meta.env.MODE === 'development';
-
-export const API_BASE_URL = isDeveloment 
-    ? 'http://localhost:5000/api'   // Local dev server
-    : '/api';                       // Production Server (Relative path)
+export const API_BASE_URL = isLocal
+    ? 'http://localhost:5000/api'   // Local Express server
+    : '/api';                       // Embedded API on Hostinger

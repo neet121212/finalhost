@@ -2,7 +2,6 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix React\"",
     "postinstall": "npm install --prefix backend && npm install --prefix React",
-    "build": "npm run build --prefix React",
     "start": "node backend/server.js"
   },
   "dependencies": {

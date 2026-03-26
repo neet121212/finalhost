@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from './ThemeContext';
 import './Auth.css';
+import { API_BASE_URL } from './config';
 
 import { Country, State, City } from 'country-state-city';
 
@@ -18,6 +19,7 @@ const Auth = () => {
   const [role, setRole] = useState('student'); // 'student', 'partner'
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPartnerPopup, setShowPartnerPopup] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -161,13 +163,15 @@ const Auth = () => {
   };
 
   const validateSignup = (targetRole) => {
-    if (formData.password !== formData.confirmPassword) {
-      setMessage({ text: 'Passwords do not match.', type: 'error' });
-      return false;
-    }
-    if (formData.password && formData.password.length < 6) {
-      setMessage({ text: 'Password must be at least 6 characters.', type: 'error' });
-      return false;
+    if (targetRole === 'student') {
+      if (formData.password !== formData.confirmPassword) {
+        setMessage({ text: 'Passwords do not match.', type: 'error' });
+        return false;
+      }
+      if (formData.password && formData.password.length < 6) {
+        setMessage({ text: 'Password must be at least 6 characters.', type: 'error' });
+        return false;
+      }
     }
     if (!formData.country || !formData.state || !formData.city) {
       setMessage({ text: 'Please select Country, State, and City.', type: 'error' });
@@ -183,7 +187,7 @@ const Auth = () => {
   const handleSignup = async (e, forcedRole) => {
     e.preventDefault();
     if (!validateSignup(forcedRole)) return;
-    setMessage({ text: 'Registering profile...', type: 'info' });
+    setMessage({ text: forcedRole === 'partner' ? 'Submitting request...' : 'Registering profile...', type: 'info' });
 
     // Format data for backend
     const splitPhone = formData.phone.split(' ');
@@ -211,7 +215,8 @@ const Auth = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      const endpoint = forcedRole === 'partner' ? `${API_BASE_URL}/auth/partner-request` : `${API_BASE_URL}/auth/signup`;
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -219,9 +224,15 @@ const Auth = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ text: `Registered successfully as ${role === 'partner' ? 'Business Partner' : 'Student'}. Please login.`, type: 'success' });
-        setMode('login');
-        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+        if (forcedRole === 'partner') {
+          setShowPartnerPopup(true);
+          setMode('login');
+          setMessage({ text: '', type: '' });
+        } else {
+          setMessage({ text: `Registered successfully as Student. Please login.`, type: 'success' });
+          setMode('login');
+          setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+        }
       } else {
         setMessage({ text: data.error || 'Registration failed.', type: 'error' });
       }
@@ -234,7 +245,7 @@ const Auth = () => {
     e.preventDefault();
     setMessage({ text: 'Logging in...', type: 'info' });
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: formData.email, password: formData.password }),
@@ -435,8 +446,6 @@ const Auth = () => {
                   <div className="input-group"><label>Team Size*</label><div className="input-container"><Users className="input-icon"/><input type="number" name="teamSize" value={formData.teamSize} onChange={handleChange} className="auth-input" placeholder="e.g. 10" required /></div></div>
                   <div className="input-group"><label>Phone*</label><div className="input-container"><Phone className="input-icon"/><input type="tel" name="phone" value={formData.phone} onChange={enforcePhonePrefix} className="auth-input" required /></div></div>
                   <div className="input-group"><label>WhatsApp</label><div className="input-container"><Smartphone className="input-icon"/><input type="tel" name="whatsapp" value={formData.whatsapp} onChange={enforcePhonePrefix} className="auth-input" /></div></div>
-                  <div className="input-group"><label>Password*</label><div className="input-container"><Lock className="input-icon"/><input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="auth-input" placeholder="••••••••" required /><div className="password-toggle" {...passwordToggleProps}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</div></div></div>
-                  <div className="input-group"><label>Confirm Password*</label><div className="input-container"><Lock className="input-icon"/><input type={showPassword ? "text" : "password"} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} className="auth-input" placeholder="••••••••" required /><div className="password-toggle" {...passwordToggleProps}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</div></div></div>
                   <div className="input-group col-span-2"><label className="checkbox-group"><input type="checkbox" name="priorExperience" checked={formData.priorExperience} onChange={handleChange} /><div className="custom-checkbox"><CheckSquare size={16} className="check-mark" /></div><span>Prior experience in study abroad?</span></label></div>
                   <button type="submit" className="btn-primary">Complete Partner Signup</button>
                 </form>
@@ -515,6 +524,19 @@ const Auth = () => {
 
         </div>
       </div>
+
+      {showPartnerPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', zIndex: 10000, justifyContent: 'center' }}>
+          <div style={{ background: 'var(--card-bg-solid, #18181b)', padding: '40px', borderRadius: '20px', textAlign: 'center', border: '1px solid var(--accent-primary, #7c3aed)', maxWidth: '500px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+            <h2 style={{ color: '#fff', marginBottom: '15px', fontSize: '2rem' }}>🎉 Congratulations!</h2>
+            <p style={{ color: 'var(--text-muted, #9ca3af)', marginBottom: '30px', fontSize: '1.1rem', lineHeight: 1.5 }}>
+              Your Business Partner registration request has been successfully submitted.<br/><br/>
+              We will contact you soon to activate your ID & Password.
+            </p>
+            <button onClick={() => setShowPartnerPopup(false)} className="btn-primary" style={{ width: 'auto', padding: '12px 30px' }}>Okay, Back to Login</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

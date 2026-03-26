@@ -196,7 +196,7 @@ router.put('/students/:id', auth, async (req, res) => {
       'passportNo', 'issueDate', 'expiryDate', 'issueCountry', 'issueState', 'issueCity',
       'nationality', 'citizenship', 'multiCitizen', 'livingInOtherCountry', 'otherNationality', 'otherLivingCountry',
       'altContactName', 'altContactPhone', 'altContactEmail', 'altContactRelation',
-      'countryOfEducation', 'highestLevelOfEducation', 'educationHistory', 'workExperience'
+      'countryOfEducation', 'highestLevelOfEducation', 'educationHistory', 'workExperience', 'appliedUniversities'
     ];
 
     allowedFields.forEach(field => {

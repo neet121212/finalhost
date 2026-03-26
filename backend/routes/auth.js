@@ -2,8 +2,8 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const nodemailer = require('nodemailer');
 const router = express.Router();
-
 const auth = require('../middleware/auth');
 
 // 1. SIGNUP ROUTE
@@ -77,10 +77,16 @@ router.get('/me', auth, async (req, res) => {
 // 4. UPDATE PROFILE ROUTE
 router.put('/update', auth, async (req, res) => {
   try {
-    const { firstName, lastName, country, state, city, phone, whatsapp, companyName, companyAddress, teamSize, priorExperience, designation, studentUniqueId } = req.body;
+    const { email, firstName, lastName, country, state, city, phone, whatsapp, companyName, companyAddress, teamSize, priorExperience, designation, studentUniqueId } = req.body;
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) return res.status(400).json({ error: "Email already in use by another account" });
+      user.email = email;
+    }
 
     if (firstName) user.firstName = firstName;
     if (lastName !== undefined) user.lastName = lastName;
@@ -100,6 +106,62 @@ router.put('/update', auth, async (req, res) => {
     res.json({ message: "Profile updated successfully", user });
   } catch (err) {
     res.status(500).json({ error: "Server error updating profile" });
+  }
+});
+
+// 5. PARTNER REGISTRATION REQUEST ROUTE
+router.post('/partner-request', async (req, res) => {
+  try {
+    const { 
+      firstName, lastName, country, state, city, phoneCode, phone, whatsappCode, whatsapp, email,
+      companyName, companyAddress, teamSize, priorExperience, designation, studentUniqueId 
+    } = req.body;
+    
+    // Check if email already registered as user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
+    // Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: process.env.EMAIL_USER, // Send to admin
+        subject: `New Partner Registration Request - ${companyName || firstName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <h2 style="color: #0284c7; border-bottom: 2px solid #e0f2fe; padding-bottom: 10px;">New Partner Request</h2>
+            <p><strong>Name:</strong> ${firstName} ${lastName || ''}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone:</strong> ${phoneCode} ${phone}</p>
+            <p><strong>WhatsApp:</strong> ${whatsappCode} ${whatsapp}</p>
+            <p><strong>Location:</strong> ${city}, ${state}, ${country}</p>
+            <h3 style="color: #0f172a; margin-top: 20px;">Company Details</h3>
+            <p><strong>Company Name:</strong> ${companyName}</p>
+            <p><strong>Company Address:</strong> ${companyAddress}</p>
+            <p><strong>Designation:</strong> ${designation}</p>
+            <p><strong>Team Size:</strong> ${teamSize}</p>
+            <p><strong>Prior Experience:</strong> ${priorExperience ? 'Yes' : 'No'}</p>
+            <p><strong>Student Unique ID:</strong> ${studentUniqueId || 'N/A'}</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+            <p style="color: #64748b;">Please review and manually create an account for this partner.</p>
+          </div>
+        `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Partner registration request sent successfully" });
+  } catch (err) {
+    console.error("Partner request error:", err);
+    res.status(500).json({ error: "Server error sending request" });
   }
 });
 

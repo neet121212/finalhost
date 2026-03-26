@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Clock, PlusCircle, Users, FileText, ArrowRight } from 'lucide-react';
 
-const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats }) => {
+const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, setPendingApplications }) => {
   useEffect(() => {
     fetchStats();
   }, []);
@@ -45,19 +45,12 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats }) 
         ) : (
           <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
             <h3>Active Applications</h3>
-            <div className="metric" style={{ justifyContent: 'center' }}>{stats.totalApplications}</div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>{stats.pendingApps} Pending Review</p>
-            <div style={{ position: 'absolute', top: '25px', right: '25px', color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>↑ 12%</div>
+            <div className="metric" style={{ justifyContent: 'center' }}>{profile.appliedUniversities ? profile.appliedUniversities.filter(u => u && typeof u === 'object' && u.id).length : 0}</div>
+            <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Based on your final submissions</p>
+            <div style={{ position: 'absolute', top: '25px', right: '25px', color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}></div>
           </div>
         )}
 
-        {isPartner && (
-          <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-            <h3>Active Counselors</h3>
-            <div className="metric" style={{ justifyContent: 'center' }}>{stats.totalCounselors}</div>
-            <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Available globally</p>
-          </div>
-        )}
       </div>
 
       {/* Main Dashboard Content Layout */}
@@ -120,7 +113,10 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats }) 
             )}
 
             <button 
-              onClick={() => setActiveTab('course-finder')}
+              onClick={() => {
+                setPendingApplications([]);
+                setActiveTab('course-finder');
+              }}
               style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
               onMouseOver={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
               onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}

@@ -1,9 +1,13 @@
 {
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix React\""
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix React\"",
+    "install:all": "npm install --prefix backend && npm install --prefix React",
+    "build": "npm run build --prefix React",
+    "start": "node backend/server.js"
   },
   "dependencies": {
-    "mongodb": "^7.1.0"
+    "mongodb": "^7.1.0",
+    "next": "^16.2.1"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Globe, MapPin } from 'lucide-react';
 import Select from 'react-select';
 import { Country, State, City } from 'country-state-city';
+import { API_BASE_URL } from '../config';
 
 const ALLOWED_COUNTRIES = []; // Disabled, global unlock
 
@@ -14,7 +15,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
 
   const fetchCounselors = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/erp/counselors', {
+      const res = await fetch(`${API_BASE_URL}/erp/counselors`, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (res.ok) setCounselors(await res.json());
@@ -99,7 +100,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/api/erp/students', {
+      const response = await fetch(`${API_BASE_URL}/erp/students`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

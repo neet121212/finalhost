@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Search, MapPin, UserCheck, Users, Edit2, Trash2, Save, X, Filter } from 'lucide-react';
 import Select from 'react-select';
 import StudentDetails from './StudentDetails';
+import { API_BASE_URL } from '../config';
 
-const StudentsList = ({ profile, setMessage }) => {
+const StudentsList = ({ profile, setMessage, pendingApplications, setPendingApplications }) => {
   const [students, setStudents] = useState([]);
   const [counselors, setCounselors] = useState([]);
   const [filters, setFilters] = useState({ country: '', state: '', isAssigned: '' });
@@ -71,7 +72,7 @@ const StudentsList = ({ profile, setMessage }) => {
 
   const fetchCounselors = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/erp/counselors', {
+      const res = await fetch(`${API_BASE_URL}/erp/counselors`, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (res.ok) setCounselors(await res.json());
@@ -82,7 +83,7 @@ const StudentsList = ({ profile, setMessage }) => {
     setLoading(true);
     try {
       const query = new URLSearchParams(filters).toString();
-      const res = await fetch(`http://localhost:5000/api/erp/students?${query}`, {
+      const res = await fetch(`${API_BASE_URL}/erp/students?${query}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (res.ok) setStudents(await res.json());
@@ -101,7 +102,7 @@ const StudentsList = ({ profile, setMessage }) => {
   const handleAssignCounselor = async (studentId, selectedOption) => {
     const counselorId = selectedOption ? selectedOption.value : '';
     try {
-      const res = await fetch(`http://localhost:5000/api/erp/students/${studentId}/assign`, {
+      const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}/assign`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
         body: JSON.stringify({ counselorId })
@@ -117,7 +118,7 @@ const StudentsList = ({ profile, setMessage }) => {
   const handleUpdateOfferStatus = async (studentId, selectedOption) => {
     const offerStatus = selectedOption ? selectedOption.value : 'Pending';
     try {
-      const res = await fetch(`http://localhost:5000/api/erp/students/${studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
         body: JSON.stringify({ offerStatus })
@@ -145,7 +146,7 @@ const StudentsList = ({ profile, setMessage }) => {
 
   const handleSaveEdit = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/erp/students/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/erp/students/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
         body: JSON.stringify(editFormData)
@@ -167,7 +168,7 @@ const StudentsList = ({ profile, setMessage }) => {
   const handleDeleteStudent = async (id) => {
     if (!window.confirm("Are you sure you want to remove this student?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/erp/students/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/erp/students/${id}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
@@ -184,7 +185,16 @@ const StudentsList = ({ profile, setMessage }) => {
   };
 
   if (selectedStudentDetails) {
-    return <StudentDetails student={selectedStudentDetails} goBack={() => { setSelectedStudentDetails(null); fetchStudents(); }} />;
+    return (
+      <StudentDetails 
+        student={selectedStudentDetails} 
+        pendingApplications={pendingApplications}
+        setPendingApplications={setPendingApplications}
+        isPartnerView={true}
+        goBack={() => { setSelectedStudentDetails(null); fetchStudents(); }} 
+        refreshProfile={fetchStudents}
+      />
+    );
   }
 
   return (
@@ -195,6 +205,25 @@ const StudentsList = ({ profile, setMessage }) => {
           <p>Filter, manage, view profiles, and assign counselors to enrolled students.</p>
         </div>
       </header>
+
+      {pendingApplications && pendingApplications.length > 0 && (
+        <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px dashed var(--accent-secondary)', padding: '15px 20px', borderRadius: '12px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'fadeIn 0.3s ease' }}>
+          <div>
+            <h4 style={{ margin: '0 0 5px 0', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
+              You have {pendingApplications.length} program(s) selected
+            </h4>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-main)' }}>Please click on a student's row below to continue the application process for them.</p>
+          </div>
+          <button 
+            onClick={() => setPendingApplications && setPendingApplications([])} 
+            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)' }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)' }}
+          >
+            Cancel Application
+          </button>
+        </div>
+      )}
 
       {/* FILTER BAR */}
       <div className="widget" style={{ marginBottom: '20px', padding: '15px' }}>

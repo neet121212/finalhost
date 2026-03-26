@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Search, Plus, Trash2, Mail, Phone, MapPin, Building, Shield } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 import Select from 'react-select';
 import { Country } from 'country-state-city';
 
@@ -24,7 +25,7 @@ const ManageCounselors = ({ setMessage }) => {
 
   const fetchCounselors = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/erp/counselors', {
+      const response = await fetch(`${API_BASE_URL}/erp/counselors`, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (response.ok) {
@@ -91,7 +92,7 @@ const ManageCounselors = ({ setMessage }) => {
   const handleAdd = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/erp/counselors', {
+      const response = await fetch(`${API_BASE_URL}/erp/counselors`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -116,7 +117,7 @@ const ManageCounselors = ({ setMessage }) => {
   const handleDelete = async (id) => {
     if (!window.confirm("Remove counselor?")) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/erp/counselors/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/erp/counselors/${id}`, {
         method: 'DELETE',
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });

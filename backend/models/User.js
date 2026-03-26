@@ -96,6 +96,16 @@ const UserSchema = new mongoose.Schema({
   assignedCounselor: { type: mongoose.Schema.Types.ObjectId, ref: 'Counselor' },
   registeredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   applications: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Application' }],
+  appliedUniversities: [new mongoose.Schema({
+    id: Number,
+    name: String,
+    location: String,
+    level: String,
+    minPercentage: Number,
+    type: String,
+    ranking: String,
+    programs: [String]
+  }, { _id: false })],
   // New Field for Tracking
   offerStatus: { type: String, enum: ['Pending', 'Received', 'Active', 'Backoff'], default: 'Pending' }
 }, { timestamps: true });

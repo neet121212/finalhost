@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const User = require('../models/User');
+const Application = require('../models/Application');
 
 // Set up Multer for memory storage (no files saved to disk)
 const storage = multer.memoryStorage();
@@ -48,8 +50,30 @@ router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
                 emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>DOB:</strong></td><td style="font-weight: 500;">${data.dob ? new Date(data.dob).toLocaleDateString() : 'N/A'}</td></tr>`;
                 emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Gender:</strong></td><td style="font-weight: 500;">${data.gender || 'N/A'}</td></tr>`;
                 emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Passport No:</strong></td><td style="font-weight: 500;">${data.passportNo || 'N/A'}</td></tr>`;
-                emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Address:</strong></td><td style="font-weight: 500;">${data.address || 'N/A'}</td></tr>`;
+                if (data.passportNo) {
+                    emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Passport Issue/Exp:</strong></td><td style="font-weight: 500;">${data.issueDate || 'N/A'} / ${data.expiryDate || 'N/A'}</td></tr>`;
+                    emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Passport Country:</strong></td><td style="font-weight: 500;">${data.issueCountry || 'N/A'}</td></tr>`;
+                }
+                emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Nationality:</strong></td><td style="font-weight: 500;">${data.nationality || 'N/A'}</td></tr>`;
                 emailHtml += `</table></div>`;
+
+                // Alternative Contact
+                if (data.altContactName) {
+                    emailHtml += `<div style="background: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">`;
+                    emailHtml += `<h3 style="color: #0f172a; margin-top: 0;">Alternative Contact</h3>`;
+                    emailHtml += `<table style="width: 100%; border-collapse: collapse;">`;
+                    emailHtml += `<tr><td style="padding: 6px 0; color: #64748b; width: 140px;"><strong>Name:</strong></td><td style="font-weight: 500;">${data.altContactName}</td></tr>`;
+                    emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Phone:</strong></td><td style="font-weight: 500;">${data.altContactPhone || 'N/A'}</td></tr>`;
+                    emailHtml += `<tr><td style="padding: 6px 0; color: #64748b;"><strong>Relation:</strong></td><td style="font-weight: 500;">${data.altContactRelation || 'N/A'}</td></tr>`;
+                    emailHtml += `</table></div>`;
+                }
+
+                // Address Details
+                emailHtml += `<div style="background: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">`;
+                emailHtml += `<h3 style="color: #0f172a; margin-top: 0;">Address Details</h3>`;
+                emailHtml += `<p><strong>Mailing:</strong> ${[data.mailingAddress1, data.mailingAddress2, data.mailingCity, data.mailingState, data.mailingCountry, data.mailingPincode].filter(Boolean).join(', ') || 'N/A'}</p>`;
+                emailHtml += `<p><strong>Permanent:</strong> ${[data.permanentAddress1, data.permanentAddress2, data.permanentCity, data.permanentState, data.permanentCountry, data.permanentPincode].filter(Boolean).join(', ') || 'N/A'}</p>`;
+                emailHtml += `</div>`;
 
                 // Academic Information
                 emailHtml += `<div style="background: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">`;
@@ -83,6 +107,82 @@ router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
                     emailHtml += `<p style="color: #64748b; font-style: italic;">No work experience provided.</p>`;
                 }
                 emailHtml += `</div>`;
+
+                // Target Universities
+                if (data.appliedUniversities && data.appliedUniversities.length > 0) {
+                    emailHtml += `<div style="background: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e0f2fe;">`;
+                    emailHtml += `<h3 style="color: #0369a1; margin-top: 0;">Target Universities</h3>`;
+                    emailHtml += `<div style="display: grid; grid-template-columns: 1fr; gap: 10px;">`;
+                    data.appliedUniversities.forEach(uni => {
+                        emailHtml += `<div style="background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">`;
+                        emailHtml += `<div style="font-weight: 800; color: #0f172a;">${uni.name}</div>`;
+                        emailHtml += `<div style="color: #64748b; font-size: 13px;">${uni.location}</div>`;
+                        if (uni.programs && uni.programs.length > 0) {
+                            emailHtml += `<div style="color: #0369a1; font-size: 12px; margin-top: 4px; font-weight: 600;">Programs: ${uni.programs.join(', ')}</div>`;
+                        }
+                        emailHtml += `</div>`;
+                    });
+                    emailHtml += `</div></div>`;
+                    
+                    // NEW ATOMIC SAVE LOGIC: Save to Database
+                    try {
+                        const studentUser = await User.findById(data.studentId);
+                        if (studentUser) {
+                            const currentApplied = studentUser.appliedUniversities || [];
+                            const mergedApplied = currentApplied.filter(u => u && typeof u === 'object' && u.id);
+                            
+                            // Fail-safe: actively sanitize the incoming payload to strip any cached strings
+                            const incomingValid = (data.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
+                            
+                            incomingValid.forEach(u => {
+                                if (!mergedApplied.find(exist => exist.id === u.id)) {
+                                    mergedApplied.push(u);
+                                }
+                            });
+                            
+                            
+                            studentUser.appliedUniversities = mergedApplied;
+                            
+                            // Create formal Application documents for the MongoDB folder
+                            const newAppIds = [];
+                            for (const uni of incomingValid) {
+                                if (uni.programs && Array.isArray(uni.programs)) {
+                                    for (const prog of uni.programs) {
+                                        const progName = `${uni.name} - ${prog}`;
+                                        const country = uni.location ? uni.location.split(',').pop().trim() : 'Unknown';
+                                        
+                                        const exists = await Application.findOne({
+                                            studentId: studentUser._id,
+                                            programName: progName
+                                        });
+                                        
+                                        if (!exists) {
+                                            const newApp = await Application.create({
+                                                studentId: studentUser._id,
+                                                programName: progName,
+                                                destinationCountry: country,
+                                                status: 'Under Review'
+                                            });
+                                            newAppIds.push(newApp._id);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (newAppIds.length > 0) {
+                                studentUser.applications = [...(studentUser.applications || []), ...newAppIds];
+                                console.log(`[Upload] Created ${newAppIds.length} new formal Application records.`);
+                            }
+                            
+                            await studentUser.save();
+                            console.log(`[Upload] Successfully saved ${incomingValid.length} applied universities to database for student ID ${data.studentId}`);
+                        } else {
+                            console.log(`[Upload Warning] Could not find user with ID ${data.studentId} to save applied universities.`);
+                        }
+                    } catch (dbErr) {
+                        console.error("[Upload] Database transaction failed to save applied universities:", dbErr.message || dbErr);
+                    }
+                }
 
             } catch (jsonErr) {
                 console.error("Failed to parse summaryData", jsonErr);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { UploadCloud, FileArchive, GraduationCap, User, Briefcase, FilePlus, CheckCircle, Trash2, AlertTriangle, Eye } from 'lucide-react';
+import { UploadCloud, FileArchive, GraduationCap, User, Briefcase, FilePlus, CheckCircle, Trash2, AlertTriangle, Eye, FileText, X, Play } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
 
@@ -302,7 +303,7 @@ const DocumentUpload = forwardRef(({ profile, setMessage }, ref) => {
 
             setMessage('Generating ZIP and sending email...');
 
-            const response = await fetch('http://localhost:5000/api/upload/email-zip', {
+            const response = await fetch(`${API_BASE_URL}/upload/email-zip`, {
                 method: 'POST',
                 body: formData
             });
@@ -316,15 +317,9 @@ const DocumentUpload = forwardRef(({ profile, setMessage }, ref) => {
                 setMessage(`ZIP created, but email failed.`);
             }
 
-            // 2. Trigger local download as well
-            const zipUrl = URL.createObjectURL(zipBlob);
-            const a = document.createElement('a');
-            a.href = zipUrl;
-            a.download = `${candidateNameUpper}_Documents.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(zipUrl);
+            // Local download disabled
+
+
 
             // reset attached UI states simply by clearing state 
             setAttachedFiles({});

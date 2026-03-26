@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LogOut, User, MapPin, Globe, Phone, Smartphone, Edit2, Save, X, 
+import {
+  LogOut, User, MapPin, Globe, Phone, Smartphone, Edit2, Save, X,
   Home, Search, Users, Briefcase, FileText, Bell, MonitorPlay, Building2, CheckSquare, KeyRound,
   Sun, Moon, Monitor, Menu, UploadCloud
 } from 'lucide-react';
@@ -16,6 +16,10 @@ import LearningResources from './components/LearningResources';
 import SearchProgram from './components/SearchProgram';
 import RegisterStudent from './components/RegisterStudent';
 import DocumentUpload from './components/DocumentUpload';
+import StudentDetails from './components/StudentDetails';
+import AppliedUniversities from './components/AppliedUniversities';
+import PartnerApplications from './components/PartnerApplications';
+import { API_BASE_URL } from './config';
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -23,9 +27,10 @@ const Dashboard = () => {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState({ text: '', type: '' });
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarLocked, setIsSidebarLocked] = useState(true);
+  const [pendingApplications, setPendingApplications] = useState([]);
 
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -35,13 +40,13 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/erp/stats', {
+      const response = await fetch(`${API_BASE_URL}/erp/stats`, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (response.ok) {
         setStats(await response.json());
       }
-    } catch (err) {}
+    } catch (err) { }
   };
 
   useEffect(() => {
@@ -55,7 +60,7 @@ const Dashboard = () => {
   const fetchProfile = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
-      const response = await fetch('http://localhost:5000/api/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
           'x-auth-token': token
         }
@@ -63,9 +68,9 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
-        setFormData(data); 
+        setFormData(data);
       } else {
-        handleLogout(); 
+        handleLogout();
       }
     } catch (err) {
       console.error(err);
@@ -88,7 +93,7 @@ const Dashboard = () => {
     setMessage({ text: 'Updating Profile...', type: 'info' });
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
-      const response = await fetch('http://localhost:5000/api/auth/update', {
+      const response = await fetch(`${API_BASE_URL}/auth/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -96,6 +101,7 @@ const Dashboard = () => {
         },
         body: JSON.stringify({
           firstName: formData.firstName,
+          email: formData.email,
           lastName: formData.lastName,
           country: formData.country,
           state: formData.state,
@@ -110,7 +116,7 @@ const Dashboard = () => {
           studentUniqueId: formData.studentUniqueId
         })
       });
-      
+
       const data = await response.json();
       if (response.ok) {
         setMessage({ text: 'Profile updated successfully.', type: 'success' });
@@ -138,13 +144,13 @@ const Dashboard = () => {
   // Sidebar link generator
   const NavButton = ({ id, icon: Icon, label }) => {
     return (
-      <button 
-        className={`nav-item ${activeTab === id ? 'active' : ''} ${!isSidebarOpen ? 'icon-only' : ''}`} 
-        onClick={() => { setActiveTab(id); setMessage({text:'', type:''}); setEditMode(false); }}
+      <button
+        className={`nav-item ${activeTab === id ? 'active' : ''} ${!isSidebarOpen ? 'icon-only' : ''}`}
+        onClick={() => { setActiveTab(id); setMessage({ text: '', type: '' }); setEditMode(false); }}
         style={{ overflow: 'hidden', whiteSpace: 'nowrap', justifyContent: !isSidebarOpen ? 'center' : 'flex-start' }}
         title={!isSidebarOpen ? label : ''}
       >
-        <Icon size={18} style={{ minWidth: '18px' }} /> 
+        <Icon size={18} style={{ minWidth: '18px' }} />
         <span className="nav-label" style={{ opacity: !isSidebarOpen ? 0 : 1, width: !isSidebarOpen ? 0 : 'auto', transition: 'opacity 0.2s', marginLeft: !isSidebarOpen ? '0' : '10px' }}>{label}</span>
       </button>
     );
@@ -157,36 +163,39 @@ const Dashboard = () => {
       </div>
 
       <div className="dash-container">
-        
+
         {/* ================================== */}
         {/* SIDEBAR                            */}
         {/* ================================== */}
-        <aside 
-          className={`dash-sidebar ${!isSidebarOpen ? 'collapsed' : ''}`} 
-          style={{ width: isSidebarOpen ? '260px' : '80px', padding: isSidebarOpen ? '2rem 1.5rem' : '2rem 10px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'}}
+        <aside
+          className={`dash-sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}
+          style={{ width: isSidebarOpen ? '260px' : '80px', padding: isSidebarOpen ? '2rem 1.5rem' : '2rem 10px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
           onMouseEnter={() => setIsSidebarOpen(true)}
           onMouseLeave={() => { if (!isSidebarLocked) setIsSidebarOpen(false); }}
         >
           <div className="sidebar-brand" style={{ padding: '0 0 1.5rem 0', display: 'flex', flexDirection: 'column', alignItems: isSidebarOpen ? 'flex-start' : 'center' }}>
-            <div style={{display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden'}}>
+            <div style={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
               {/* Force image to fill width gracefully, hiding text part when collapsed */}
-              <img src="/logo.png" alt="Company Logo" style={{height: '38px', objectFit: 'cover', objectPosition: 'left center', width: isSidebarOpen ? '200px' : '60px', transition: 'width 0.3s ease', flexShrink: 0}} />
+              <img src="/logo.png" alt="Company Logo" style={{ height: '38px', objectFit: 'cover', objectPosition: 'left center', width: isSidebarOpen ? '200px' : '60px', transition: 'width 0.3s ease', flexShrink: 0 }} />
             </div>
             {isSidebarOpen && (
               <div style={{ animation: 'fadeIn 0.3s ease', marginTop: '0.5rem', marginLeft: '0.2rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px'}}>{isPartner ? 'Partner Portal' : 'Student Portal'}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>{isPartner ? 'Partner Portal' : 'Student Portal'}</span>
               </div>
             )}
           </div>
 
           <nav className="sidebar-nav">
             <NavButton id="home" icon={Home} label="Dashboard" />
-            
+
             {/* Student specific tabs */}
             {!isPartner && (
               <>
                 <NavButton id="course-finder" icon={Search} label="Course Finder" />
-                <NavButton id="document-upload" icon={UploadCloud} label="Documents Upload" />
+                <NavButton id="applications" icon={FileText} label=" Application" />
+                <NavButton id="applied-universities" icon={CheckSquare} label="Applied Universities" />
+                <NavButton id="learning" icon={MonitorPlay} label="Learning Resource" />
+                <NavButton id="notifications" icon={Bell} label="Notifications" />
                 <NavButton id="profile" icon={User} label="Profile" />
               </>
             )}
@@ -196,19 +205,19 @@ const Dashboard = () => {
               <>
                 <NavButton id="register-student" icon={User} label="Register New Student" />
                 <NavButton id="students-list" icon={Users} label="Students List" />
-                <NavButton id="applications" icon={FileText} label="Applications" />
                 <NavButton id="course-finder" icon={Search} label="Search Program" />
+                <NavButton id="partner-applications" icon={FileText} label="Applied Applications" />
                 <NavButton id="learning" icon={MonitorPlay} label="Learning Resource" />
                 <NavButton id="notifications" icon={Bell} label="Notifications" />
                 <NavButton id="counselors" icon={Briefcase} label="Manage Counselors" />
                 <NavButton id="profile" icon={User} label="My Account" />
               </>
             )}
-            
+
             <div className="nav-divider"></div>
-            
+
             <button className={`nav-item logout-btn ${!isSidebarOpen ? 'icon-only' : ''}`} onClick={handleLogout} style={{ justifyContent: !isSidebarOpen ? 'center' : 'flex-start' }} title={!isSidebarOpen ? 'Logout' : ''}>
-              <LogOut size={18} style={{ minWidth: '18px' }} /> 
+              <LogOut size={18} style={{ minWidth: '18px' }} />
               <span className="nav-label" style={{ opacity: !isSidebarOpen ? 0 : 1, width: !isSidebarOpen ? 0 : 'auto', transition: 'opacity 0.2s', marginLeft: !isSidebarOpen ? '0' : '10px' }}>Logout</span>
             </button>
           </nav>
@@ -226,11 +235,11 @@ const Dashboard = () => {
         {/* MAIN CONTENT AREA                  */}
         {/* ================================== */}
         <main className="dash-main">
-          
+
           {/* TOP HEADER WITH HAMBURGER & THEME TOGGLE */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 1.5rem', background: 'var(--card-bg-solid)', borderBottom: '1px solid var(--glass-border)', position: 'sticky', top: 0, zIndex: 11 }}>
-            <button 
-              className="hamburger-btn" 
+            <button
+              className="hamburger-btn"
               onClick={() => {
                 const nextLock = !isSidebarLocked;
                 setIsSidebarLocked(nextLock);
@@ -240,7 +249,7 @@ const Dashboard = () => {
             >
               <Menu size={24} />
             </button>
-            
+
             {/* THEME TOGGLE (Relocated) */}
             <div style={{ display: 'flex', background: 'var(--table-header-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
               <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Light Mode"><Sun size={14} /></button>
@@ -259,7 +268,7 @@ const Dashboard = () => {
               {!editMode ? (
                 <button className="btn-edit" onClick={() => setEditMode(true)}><Edit2 size={16} /> Edit Profile</button>
               ) : (
-                <button className="btn-cancel" onClick={() => { setEditMode(false); setFormData(profile); setMessage({text:'', type:''}); }}><X size={16} /> Cancel</button>
+                <button className="btn-cancel" onClick={() => { setEditMode(false); setFormData(profile); setMessage({ text: '', type: '' }); }}><X size={16} /> Cancel</button>
               )}
             </header>
           )}
@@ -274,38 +283,63 @@ const Dashboard = () => {
             {/* ================================== */}
             {/* VIEW: HOME OVERVIEW                */}
             {/* ================================== */}
-            {activeTab === 'home' && <DashboardHome profile={profile} isPartner={isPartner} setActiveTab={setActiveTab} stats={stats} fetchStats={fetchStats} />}
-            
+            {activeTab === 'home' && (
+              <DashboardHome 
+                profile={profile} 
+                isPartner={isPartner} 
+                setActiveTab={setActiveTab} 
+                stats={stats} 
+                fetchStats={fetchStats} 
+                setPendingApplications={setPendingApplications}
+              />
+            )}
+
             {/* ================================== */}
             {/* VIEW: STUDENTS LIST                */}
             {/* ================================== */}
-            {activeTab === 'students-list' && <StudentsList profile={profile} setMessage={setMessage} fetchStats={fetchStats} />}
-            
+            {activeTab === 'students-list' && (
+              <StudentsList 
+                profile={profile} 
+                setMessage={setMessage} 
+                fetchStats={fetchStats} 
+                pendingApplications={pendingApplications} 
+                setPendingApplications={setPendingApplications} 
+              />
+            )}
+
             {/* ================================== */}
             {/* VIEW: REGISTER STUDENT              */}
             {/* ================================== */}
             {activeTab === 'register-student' && <RegisterStudent profile={profile} setMessage={setMessage} />}
 
-            {/* ================================== */}
-            {/* VIEW: DOCUMENT UPLOAD */}
-            {/* ================================== */}
-            {activeTab === 'document-upload' && <DocumentUpload profile={profile} setMessage={setMessage} />}
 
             {/* ================================== */}
             {/* VIEW: APPLICATIONS                 */}
             {/* ================================== */}
             {activeTab === 'applications' && (
-              <div className="view-standard">
-                <header className="dash-header">
-                  <div>
-                    <h1>Applications Tracker</h1>
-                    <p>Monitor submission statuses to international universities.</p>
-                  </div>
-                </header>
-                <div className="widget placeholder-panel">
-                  <div className="empty-state">No active applications in queue.</div>
-                </div>
-              </div>
+              !isPartner && (
+                <StudentDetails 
+                  student={profile} 
+                  goBack={() => setActiveTab('home')} 
+                  pendingApplications={pendingApplications}
+                  setPendingApplications={setPendingApplications}
+                  refreshProfile={fetchProfile}
+                />
+              )
+            )}
+
+            {/* ================================== */}
+            {/* VIEW: APPLIED UNIVERSITIES         */}
+            {/* ================================== */}
+            {activeTab === 'applied-universities' && (
+              <AppliedUniversities profile={profile} />
+            )}
+
+            {/* ================================== */}
+            {/* VIEW: PARTNER APPLICATIONS         */}
+            {/* ================================== */}
+            {activeTab === 'partner-applications' && isPartner && (
+              <PartnerApplications profile={profile} setMessage={setMessage} />
             )}
 
             {/* ================================== */}
@@ -322,11 +356,23 @@ const Dashboard = () => {
             {/* VIEW: LEARNING RESOURCES           */}
             {/* ================================== */}
             {activeTab === 'learning' && <LearningResources />}
-            
+
             {/* ================================== */}
             {/* VIEW: SEARCH PROGRAM               */}
             {/* ================================== */}
-            {activeTab === 'course-finder' && <SearchProgram />}
+            {activeTab === 'course-finder' && (
+              <SearchProgram 
+                preselectedUnis={pendingApplications}
+                onProceed={(selected) => {
+                  setPendingApplications(selected);
+                  if (isPartner) {
+                    setActiveTab('students-list');
+                  } else {
+                    setActiveTab('applications');
+                  }
+                }}
+              />
+            )}
 
             {/* ================================== */}
             {/* VIEW: PROFILE MANAGEMENT           */}
@@ -441,7 +487,10 @@ const Dashboard = () => {
                 ) : (
                   <form onSubmit={handleUpdate} className="edit-form-grid">
                     <div className="profile-card full-width edit-card">
-                      <p className="edit-subtitle">Email is your locked identifier.</p>
+                      <div className="dash-input-group">
+                        <label>Email Address</label>
+                        <input type="email" name="email" value={formData.email || ''} onChange={handleChange} required className="dash-input" />
+                      </div>
 
                       <div className="dash-input-group">
                         <label>First Name</label>
@@ -470,12 +519,12 @@ const Dashboard = () => {
 
                       <div className="dash-input-group">
                         <label>Phone Number *</label>
-                      <input type="tel" name="phone" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value.slice(0, 10) })} required className="dash-input" />
-                    </div>
-                    <div className="dash-input-group">
-                      <label>WhatsApp Number</label>
-                      <input type="tel" name="whatsapp" value={formData.whatsapp || ''} onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value.slice(0, 10) })} className="dash-input" />
-                    </div>
+                        <input type="tel" name="phone" value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value.slice(0, 10) })} required className="dash-input" />
+                      </div>
+                      <div className="dash-input-group">
+                        <label>WhatsApp Number</label>
+                        <input type="tel" name="whatsapp" value={formData.whatsapp || ''} onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value.slice(0, 10) })} className="dash-input" />
+                      </div>
 
                       {isPartner && (
                         <>
@@ -500,12 +549,12 @@ const Dashboard = () => {
                             <input type="text" name="studentUniqueId" value={formData.studentUniqueId || ''} onChange={handleChange} className="dash-input" />
                           </div>
                           <div className="input-group col-span-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '10px', gridColumn: '1 / -1' }}>
-                            <input 
-                              type="checkbox" 
-                              name="priorExperience" 
+                            <input
+                              type="checkbox"
+                              name="priorExperience"
                               id="priorExperience"
-                              checked={formData.priorExperience || false} 
-                              onChange={(e) => setFormData({ ...formData, priorExperience: e.target.checked })} 
+                              checked={formData.priorExperience || false}
+                              onChange={(e) => setFormData({ ...formData, priorExperience: e.target.checked })}
                               style={{ width: 'auto', cursor: 'pointer' }}
                             />
                             <label htmlFor="priorExperience" style={{ cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-main)', margin: 0 }}> Prior experience in study abroad?</label>
@@ -522,39 +571,6 @@ const Dashboard = () => {
               </>
             )}
 
-            {/* ================================== */}
-            {/* VIEW: COURSE FINDER                */}
-            {/* ================================== */}
-            {activeTab === 'course-finder' && (
-              <div className="view-standard">
-                <header className="dash-header">
-                  <div>
-                    <h1>{isPartner ? 'Search Program' : 'Course Finder'}</h1>
-                    <p>Search universities and programs worldwide.</p>
-                  </div>
-                </header>
-                <div className="finder-search-bar">
-                  <input type="text" placeholder="Search by University Name, Country, or Course title..." className="dash-input large-input" />
-                  <button className="btn-save"><Search size={18} /> Search</button>
-                </div>
-                <div className="widget placeholder-panel mt-4">
-                  <div className="empty-state">Use the search bar above to begin finding opportunities.</div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'learning' && (
-              <div className="view-standard">
-                <header className="dash-header">
-                  <div>
-                    <h1>Learning Resources</h1>
-                    <p>Access training materials and procedure documents.</p>
-                  </div>
-                </header>
-                <div className="widget placeholder-panel"><div className="empty-state">Document repository initialized. (Content syncing...)</div></div>
-              </div>
-            )}
-            
             {activeTab === 'notifications' && (
               <div className="view-standard">
                 <header className="dash-header">

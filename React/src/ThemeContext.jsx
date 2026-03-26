@@ -6,11 +6,11 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Always launch in dark mode by default
-    return 'dark';
+    // Launch in light mode by default
+    return 'light';
   });
 
-  const [activeTheme, setActiveTheme] = useState('dark'); // 'light' or 'dark'
+  const [activeTheme, setActiveTheme] = useState('light'); // 'light' or 'dark'
 
   useEffect(() => {
     const applyTheme = () => {

@@ -221,10 +221,13 @@ router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
             ]
         };
 
+        /* Temporarily disabled
         transporter.sendMail(mailOptions)
             .then(() => console.log('Email sent successfully in background!'))
             .catch(err => console.error('Email sending error in background:', err));
-            
+        */
+        
+        console.log('Email sending is temporarily disabled by admin request.');
         res.status(200).json({ message: 'Email sequence started in background with ZIP attachment!' });
 
     } catch (err) {

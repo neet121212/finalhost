@@ -441,6 +441,10 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   };
 
   const handleDownloadExcel = () => {
+    setError("Excel download is temporarily disabled.");
+    setTimeout(() => setError(null), 4000);
+    return;
+    
     const selected = universitiesData.filter(u => selectedUniIds.includes(u.id));
     if (selected.length === 0) return;
 

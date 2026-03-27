@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, MapPin, Building, GraduationCap, ExternalLink, Filter, Database, Loader2, CalendarClock } from 'lucide-react';
+import { Search, MapPin, Building, GraduationCap, ExternalLink, Filter, Database, Loader2, CalendarClock, Download, X, CheckSquare, FileSpreadsheet } from 'lucide-react';
 import Select from 'react-select';
+import * as XLSX from 'xlsx';
 
 // ==========================================
 // PASTE YOUR GOOGLE APP SCRIPT WEB APP URL BELOW
@@ -67,6 +68,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedUniIds, setSelectedUniIds] = useState(() => preselectedUnis.map(u => u.id));
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   useEffect(() => {
     setSelectedUniIds(prev => {
@@ -131,15 +133,34 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     ...extractUniqueOptions(universitiesData, ['programlevel', 'level'])
   ], [universitiesData]);
 
-  const interestedFieldOptions = useMemo(() => [
-    { value: '', label: 'Any Interested Field' },
-    ...extractUniqueOptions(universitiesData, ['interestedfield'])
-  ], [universitiesData]);
+  const interestedFieldOptions = useMemo(() => {
+    let filteredData = universitiesData;
+    if (searchParams.programLevel && searchParams.programLevel.value) {
+      const qLevel = searchParams.programLevel.value.toLowerCase();
+      filteredData = filteredData.filter(u => {
+        const uLevel = (getFieldValue(u, ['programlevel', 'level']) || "").toLowerCase();
+        return uLevel.includes(qLevel);
+      });
+    }
+    return [
+      { value: '', label: 'Any Interested Field' },
+      ...extractUniqueOptions(filteredData, ['interestedfield'])
+    ];
+  }, [universitiesData, searchParams.programLevel]);
 
   const subFieldOptions = useMemo(() => {
     let filteredData = universitiesData;
+    
+    if (searchParams.programLevel && searchParams.programLevel.value) {
+      const qLevel = searchParams.programLevel.value.toLowerCase();
+      filteredData = filteredData.filter(u => {
+        const uLevel = (getFieldValue(u, ['programlevel', 'level']) || "").toLowerCase();
+        return uLevel.includes(qLevel);
+      });
+    }
+
     if (searchParams.interestedField && searchParams.interestedField.value) {
-      filteredData = universitiesData.filter(u => {
+      filteredData = filteredData.filter(u => {
         const val = getFieldValue(u, ['interestedfield']);
         return val && String(val).trim() === searchParams.interestedField.value;
       });
@@ -148,10 +169,19 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
       { value: '', label: 'Any Sub Field' },
       ...extractUniqueOptions(filteredData, ['subfield'])
     ];
-  }, [universitiesData, searchParams.interestedField]);
+  }, [universitiesData, searchParams.programLevel, searchParams.interestedField]);
 
   const programNameOptions = useMemo(() => {
     let filteredData = universitiesData;
+
+    if (searchParams.programLevel && searchParams.programLevel.value) {
+      const qLevel = searchParams.programLevel.value.toLowerCase();
+      filteredData = filteredData.filter(u => {
+        const uLevel = (getFieldValue(u, ['programlevel', 'level']) || "").toLowerCase();
+        return uLevel.includes(qLevel);
+      });
+    }
+
     if (searchParams.interestedField && searchParams.interestedField.value) {
       filteredData = filteredData.filter(u => {
         const val = getFieldValue(u, ['interestedfield']);
@@ -168,7 +198,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
       { value: '', label: 'Any Program' },
       ...extractUniqueOptions(filteredData, ['programname', 'program', 'name'])
     ];
-  }, [universitiesData, searchParams.interestedField, searchParams.subField]);
+  }, [universitiesData, searchParams.programLevel, searchParams.interestedField, searchParams.subField]);
 
   const customSelectStyles = {
     control: (base, state) => ({
@@ -212,7 +242,11 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
       const updated = { ...prev, [name]: selectedOption };
       
       // Auto-clear dependent fields when parent changes
-      if (name === "interestedField") {
+      if (name === "programLevel") {
+        updated.interestedField = null;
+        updated.subField = null;
+        updated.programName = null;
+      } else if (name === "interestedField") {
         updated.subField = null;
         updated.programName = null;
       } else if (name === "subField") {
@@ -293,22 +327,39 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     const uniId = uni.id;
     const isNowSelected = !selectedUniIds.includes(uniId);
     
+    if (isNowSelected && selectedUniIds.length >= 25 && !hideFooter) {
+       setError("You can select a maximum of 25 programs for the Excel export at one time.");
+       setTimeout(() => setError(null), 4000);
+       return;
+    }
+
     setSelectedUniIds(prev => 
       prev.includes(uniId) ? prev.filter(id => id !== uniId) : [...prev, uniId]
     );
 
     if (onSelectionChange) {
-      const standardizedUni = {
-        id: uni.id,
-        name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
-        location: getFieldValue(uni, ['location']) || "Unknown Location",
-        level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
-        minPercentage: getFieldValue(uni, ['percentage']) || 0,
-        type: getFieldValue(uni, ['type']) || "N/A",
-        ranking: getFieldValue(uni, ['ranking']) || "N/A",
-        programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"]
-      };
-      onSelectionChange(standardizedUni, isNowSelected);
+      onSelectionChange(uni, isNowSelected);
+    }
+  };
+
+  const handleSelectAllFiltered = () => {
+    const visibleIds = filteredResults.slice(0, 25).map(uni => uni.id || uni.SNO);
+    const allVisibleSelected = visibleIds.every(id => selectedUniIds.includes(id));
+
+    if (allVisibleSelected) {
+      // Deselect all visible
+      setSelectedUniIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      // Select all visible (up to 25)
+      setSelectedUniIds(prev => {
+        const newSet = new Set([...prev, ...visibleIds]);
+        return Array.from(newSet).slice(0, 25); // Hard enforcement of 25 total
+      });
+      
+      if (filteredResults.length > 25) {
+        setError("Only the first 25 filtered results were selected (Export Limit).");
+        setTimeout(() => setError(null), 4000);
+      }
     }
   };
 
@@ -328,6 +379,32 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
       }));
       onProceed(selected);
     }
+  };
+
+  const handleDownloadExcel = () => {
+    const selected = universitiesData.filter(u => selectedUniIds.includes(u.id));
+    if (selected.length === 0) return;
+
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Convert JSON to worksheet, omitting sensitive or internal keys like 'id'
+    const cleanData = selected.map(uni => {
+      const { id, ...rest } = uni;
+      return rest;
+    });
+    
+    const ws = XLSX.utils.json_to_sheet(cleanData);
+    
+    // Standard column widths
+    const wscols = Object.keys(cleanData[0] || {}).map(() => ({ wch: 20 }));
+    ws['!cols'] = wscols;
+
+    XLSX.utils.book_append_sheet(wb, ws, "Selected Programs");
+    
+    // Generate and download
+    XLSX.writeFile(wb, "Course_Finder_Export.xlsx");
+    setShowDownloadModal(false);
   };
 
   // Helper to extract non-standard columns for display
@@ -439,8 +516,33 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
 
       <div className="widget mt-4" style={{ padding: '0', overflow: 'hidden' }}>
         <h3 style={{ padding: '20px 20px 0 20px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>Search Results</span>
-          {!isLoading && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{filteredResults.length} programs found</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <span>Search Results</span>
+            {!isLoading && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{filteredResults.length} programs found</span>}
+          </div>
+          {!isLoading && filteredResults.length > 0 && !hideFooter && (
+            <button 
+              onClick={handleSelectAllFiltered}
+              style={{ 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                color: 'var(--accent-secondary)', 
+                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                padding: '6px 15px', 
+                borderRadius: '8px', 
+                fontSize: '0.85rem', 
+                fontWeight: 600, 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <CheckSquare size={14} /> 
+              {filteredResults.slice(0, 25).every(u => selectedUniIds.includes(u.id || u.SNO)) 
+                ? 'Deselect All' 
+                : 'Select All (Max 25)'}
+            </button>
+          )}
         </h3>
         
         {isLoading ? (
@@ -458,10 +560,11 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
               const otherCols = getOtherColumns(uni);
               
               const uniName = uni["University Name"] || uni["university name"] || uni.name || "Unknown University";
-              const programName = uni["program name"] || uni["Program name"] || uni.program || "Unknown Program";
-              const location = uni["Location"] || uni.location || "Unknown Location";
-              const type = uni["Type"] || uni.type || "N/A";
-              const ranking = uni["Ranking"] || uni.ranking || "N/A";
+              const programNameRaw = uni["Program Name "] || uni["program name"] || uni["Program name"] || uni.program || "";
+              const programName = (programNameRaw && programNameRaw !== "N/A") ? programNameRaw : "";
+              const location = (uni["Location"] || uni.location) ? (uni["Location"] || uni.location) : "Location Not Listed";
+              const type = (uni["Type"] || uni.type) && (uni["Type"] || uni.type) !== "N/A" ? (uni["Type"] || uni.type) : "";
+              const ranking = (uni["Ranking"] || uni.ranking) && (uni["Ranking"] || uni.ranking) !== "N/A" ? (uni["Ranking"] || uni.ranking) : "";
               const reqPercentage = uni["percentage"] || uni["Percentage"] || uni.percentage || "0";
               
               let displayPercentage = reqPercentage;
@@ -476,9 +579,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
                 }
               }
 
-              const level = uni["program level"] || uni["Program level"] || uni.level || "N/A";
-              const interestedField = uni["Interested field"] || uni["interested field"] || uni.interestedField || "N/A";
-              const subField = uni["sub field"] || uni["Sub field"] || uni.subField || "N/A";
+              const levelRaw = uni["program level"] || uni["Program level"] || uni.level || "";
+              const level = (levelRaw && levelRaw !== "N/A") ? levelRaw : "";
+              const interestedFieldRaw = uni["Interested field"] || uni["interested field"] || uni.interestedField || "";
+              const interestedField = (interestedFieldRaw && interestedFieldRaw !== "N/A") ? interestedFieldRaw : "";
+              const subFieldRaw = uni["sub field"] || uni["Sub field"] || uni.subField || "";
+              const subField = (subFieldRaw && subFieldRaw !== "N/A") ? subFieldRaw : "";
 
               return (
                 <div key={uniId} style={{ 
@@ -507,37 +613,28 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <Building size={18} className="text-muted" /> {uniName}
+                          <Building size={18} className="text-muted" /> {programName || uniName}
                         </h4>
-                        <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
-                          {location !== "Unknown Location" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {location}</span>}
+                        {programName && (
+                          <div style={{ fontSize: '0.95rem', color: 'var(--accent-secondary)', fontWeight: 600 }}>
+                            {uniName}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap', marginTop: '5px' }}>
+                          {location !== "Location Not Listed" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {location}</span>}
                           {reqPercentage !== "0" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {displayPercentage}%</span>}
-                          {type !== "N/A" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px' }}>{type}</span>}
-                          {ranking !== "N/A" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '4px' }}>{ranking}</span>}
+                          {type !== "" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px' }}>{type}</span>}
+                          {ranking !== "" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '4px' }}>{ranking}</span>}
                         </div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginTop: '5px' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--accent-secondary)' }}>{programName}</span> <span className="text-muted">({level})</span>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginTop: '8px' }}>
+                          {level && <span className="text-muted">Target Level: ({level})</span>}
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            {interestedField} {subField !== "N/A" && `> ${subField}`}
+                            {interestedField} {subField && ` > ${subField}`}
                           </div>
                         </div>
                       </div>
                     </div>
-
-                    {!hideFooter && (
-                      <button 
-                        className="btn-save" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onProceed) handleProceedWithSelected(e);
-                        }}
-                        style={{ background: 'var(--accent-primary)', border: 'none', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
-                      >
-                        Select <ExternalLink size={14} />
-                      </button>
-                    )}
                   </div>
-
                   {/* Dynamic Other Columns from Google Sheet */}
                   {otherCols.length > 0 && (
                     <div style={{ 
@@ -615,21 +712,83 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
           </span>
           <button 
             className="btn-save"
-            onClick={handleProceedWithSelected}
+            onClick={() => setShowDownloadModal(true)}
             style={{ 
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', 
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
               border: 'none', 
               color: '#ffffff', 
               padding: '8px 20px', 
               fontSize: '0.95rem',
               fontWeight: 800,
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
               borderRadius: '25px',
-              margin: 0
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            {proceedLabel}
+            <Download size={18} /> Review & Download Excel
           </button>
+        </div>
+      )}
+
+      {/* EXCEL EXPORT REVIEW MODAL */}
+      {showDownloadModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease', padding: '20px' }}>
+          <div style={{ background: 'var(--card-bg-solid)', padding: '0', borderRadius: '20px', border: '1px solid var(--glass-border)', maxWidth: '600px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', maxHeight: '85vh', overflow: 'hidden' }}>
+            
+            <div style={{ padding: '20px 25px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.2rem', fontWeight: 800 }}><FileSpreadsheet size={22} color="#10b981" /> Export Data Configuration</h3>
+              <button onClick={() => setShowDownloadModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}><X size={20} /></button>
+            </div>
+
+            <div style={{ padding: '25px', overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>Currently Selected Programs:</div>
+                <div style={{ fontSize: '0.85rem', color: selectedUniIds.length === 25 ? '#ef4444' : 'var(--accent-secondary)', fontWeight: 800, background: 'var(--input-bg)', padding: '4px 12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>{selectedUniIds.length} / 25 Maximum</div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {universitiesData.filter(u => selectedUniIds.includes(u.id)).map(uni => {
+                  const uniName = uni["University Name"] || uni["university name"] || uni.name || "Unknown University";
+                  const programNameRaw = uni["Program Name "] || uni["program name"] || uni["Program name"] || uni.program || "";
+                  const programName = (programNameRaw && programNameRaw !== "N/A") ? programNameRaw : "";
+                  
+                  return (
+                    <div key={uni.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '12px 15px', borderRadius: '12px' }}>
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: '15px' }}>
+                        <div style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{programName || uniName}</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>{programName ? uniName : ''}</div>
+                      </div>
+                      <button 
+                        onClick={() => toggleSelection(uni)}
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                        title="Remove from export list"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {selectedUniIds.length === 0 && (
+                   <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No programs selected for export.</div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ padding: '20px 25px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end', gap: '15px', background: 'var(--bg-secondary)' }}>
+               <button onClick={() => setShowDownloadModal(false)} style={{ padding: '10px 20px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+               <button 
+                  onClick={handleDownloadExcel} 
+                  disabled={selectedUniIds.length === 0}
+                  style={{ padding: '10px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: selectedUniIds.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedUniIds.length === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
+               >
+                  <Download size={16} /> Generate .XLSX Excel File
+               </button>
+            </div>
+
+          </div>
         </div>
       )}
     </div>

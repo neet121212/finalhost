@@ -67,6 +67,10 @@ const Dashboard = () => {
       });
       if (response.ok) {
         const data = await response.json();
+        if (data.role === 'admin') {
+           navigate('/admin');
+           return;
+        }
         setProfile(data);
         setFormData(data);
       } else {

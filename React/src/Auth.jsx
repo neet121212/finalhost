@@ -20,6 +20,7 @@ const Auth = () => {
   const [keepSignedIn, setKeepSignedIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPartnerPopup, setShowPartnerPopup] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -27,23 +28,23 @@ const Auth = () => {
   const customSelectStyles = {
     control: (provided) => ({
       ...provided,
-      background: 'rgba(15, 10, 30, 0.98)',
-      borderColor: 'rgba(255,255,255,0.2)',
-      color: '#fff',
+      background: 'var(--input-bg)',
+      borderColor: 'var(--input-border)',
+      color: 'var(--text-main)',
       boxShadow: 'none',
       minHeight: '42px',
       '&:hover': { borderColor: 'var(--accent-primary)' }
     }),
     menu: (provided) => ({
       ...provided,
-      background: 'rgb(18, 12, 35)',
-      border: '1px solid rgba(255,255,255,0.15)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.9)',
+      background: 'var(--bg-secondary)',
+      border: '1px solid var(--glass-border)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
       zIndex: 9999
     }),
     menuList: (provided) => ({
       ...provided,
-      background: 'rgb(18, 12, 35)',
+      background: 'var(--bg-secondary)',
       padding: 0
     }),
     option: (provided, state) => ({
@@ -51,18 +52,18 @@ const Auth = () => {
       background: state.isSelected
         ? 'var(--accent-primary)'
         : state.isFocused
-          ? 'rgba(124, 58, 237, 0.25)'
+          ? 'var(--input-focus, rgba(124, 58, 237, 0.1))'
           : 'transparent',
-      color: state.isSelected ? '#fff' : '#e2e8f0',
+      color: state.isSelected ? '#ffffff' : 'var(--text-main)',
       cursor: 'pointer',
-      ':active': { background: 'rgba(124, 58, 237, 0.4)' }
+      ':active': { background: 'var(--accent-secondary)' }
     }),
-    singleValue: (provided) => ({ ...provided, color: '#fff' }),
-    input: (provided) => ({ ...provided, color: '#fff' }),
-    placeholder: (provided) => ({ ...provided, color: 'rgba(255,255,255,0.4)' }),
-    dropdownIndicator: (provided) => ({ ...provided, color: 'rgba(255,255,255,0.5)' }),
-    clearIndicator: (provided) => ({ ...provided, color: 'rgba(255,255,255,0.5)' }),
-    indicatorSeparator: (provided) => ({ ...provided, background: 'rgba(255,255,255,0.2)' })
+    singleValue: (provided) => ({ ...provided, color: 'var(--text-main)' }),
+    input: (provided) => ({ ...provided, color: 'var(--text-main)' }),
+    placeholder: (provided) => ({ ...provided, color: 'var(--text-muted)' }),
+    dropdownIndicator: (provided) => ({ ...provided, color: 'var(--text-muted)' }),
+    clearIndicator: (provided) => ({ ...provided, color: 'var(--text-muted)' }),
+    indicatorSeparator: (provided) => ({ ...provided, background: 'var(--glass-border)' })
   };
 
   const startShowPassword = () => setShowPassword(true);
@@ -84,6 +85,16 @@ const Auth = () => {
       navigate('/dashboard');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (showSuccessPopup) {
+      const timer = setTimeout(() => {
+        setShowSuccessPopup(false);
+        setMode('login');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessPopup]);
 
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
@@ -229,9 +240,9 @@ const Auth = () => {
           setMode('login');
           setMessage({ text: '', type: '' });
         } else {
-          setMessage({ text: `Registered successfully as Student. Please login.`, type: 'success' });
-          setMode('login');
+          setShowSuccessPopup(true);
           setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+          setMessage({ text: '', type: '' });
         }
       } else {
         setMessage({ text: data.error || 'Registration failed.', type: 'error' });
@@ -534,6 +545,23 @@ const Auth = () => {
               We will contact you soon to activate your ID & Password.
             </p>
             <button onClick={() => setShowPartnerPopup(false)} className="btn-primary" style={{ width: 'auto', padding: '12px 30px' }}>Okay, Back to Login</button>
+          </div>
+        </div>
+      )}
+
+      {showSuccessPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', zIndex: 10001, justifyContent: 'center' }}>
+          <div style={{ background: 'var(--card-bg-solid)', padding: '40px', borderRadius: '24px', textAlign: 'center', border: '2px solid #10b981', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', animation: 'containerFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both' }}>
+            <div style={{ width: '80px', height: '80px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <div style={{ color: '#10b981', fontSize: '40px' }}>✓</div>
+            </div>
+            <h2 style={{ color: 'var(--text-main)', marginBottom: '12px', fontSize: '1.8rem' }}>Registration Successful!</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '20px' }}>
+              Welcome aboard! Your student account has been created.
+            </p>
+            <div className="status-pill info" style={{ margin: 0 }}>
+              Redirecting to login page in 3 seconds...
+            </div>
           </div>
         </div>
       )}

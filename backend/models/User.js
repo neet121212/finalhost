@@ -83,7 +83,7 @@ const UserSchema = new mongoose.Schema({
   whatsapp: { type: String, required: false },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['student', 'partner'], default: 'student' },
+  role: { type: String, enum: ['student', 'partner', 'admin'], default: 'student' },
   
   // Partner specific fields (Optional for students)
   companyName: { type: String },

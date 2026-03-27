@@ -66,8 +66,6 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   const [universitiesData, setUniversitiesData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [results, setResults] = useState([]);
-  const [hasSearched, setHasSearched] = useState(false);
   const [selectedUniIds, setSelectedUniIds] = useState(() => preselectedUnis.map(u => u.id));
 
   useEffect(() => {
@@ -138,15 +136,39 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     ...extractUniqueOptions(universitiesData, ['interestedfield'])
   ], [universitiesData]);
 
-  const subFieldOptions = useMemo(() => [
-    { value: '', label: 'Any Sub Field' },
-    ...extractUniqueOptions(universitiesData, ['subfield'])
-  ], [universitiesData]);
+  const subFieldOptions = useMemo(() => {
+    let filteredData = universitiesData;
+    if (searchParams.interestedField && searchParams.interestedField.value) {
+      filteredData = universitiesData.filter(u => {
+        const val = getFieldValue(u, ['interestedfield']);
+        return val && String(val).trim() === searchParams.interestedField.value;
+      });
+    }
+    return [
+      { value: '', label: 'Any Sub Field' },
+      ...extractUniqueOptions(filteredData, ['subfield'])
+    ];
+  }, [universitiesData, searchParams.interestedField]);
 
-  const programNameOptions = useMemo(() => [
-    { value: '', label: 'Any Program' },
-    ...extractUniqueOptions(universitiesData, ['programname', 'program', 'name'])
-  ], [universitiesData]);
+  const programNameOptions = useMemo(() => {
+    let filteredData = universitiesData;
+    if (searchParams.interestedField && searchParams.interestedField.value) {
+      filteredData = filteredData.filter(u => {
+        const val = getFieldValue(u, ['interestedfield']);
+        return val && String(val).trim() === searchParams.interestedField.value;
+      });
+    }
+    if (searchParams.subField && searchParams.subField.value) {
+      filteredData = filteredData.filter(u => {
+        const val = getFieldValue(u, ['subfield']);
+        return val && String(val).trim() === searchParams.subField.value;
+      });
+    }
+    return [
+      { value: '', label: 'Any Program' },
+      ...extractUniqueOptions(filteredData, ['programname', 'program', 'name'])
+    ];
+  }, [universitiesData, searchParams.interestedField, searchParams.subField]);
 
   const customSelectStyles = {
     control: (base, state) => ({
@@ -186,15 +208,26 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   };
 
   const handleSelectChange = (name, selectedOption) => {
-    setSearchParams(prev => ({ ...prev, [name]: selectedOption }));
+    setSearchParams(prev => {
+      const updated = { ...prev, [name]: selectedOption };
+      
+      // Auto-clear dependent fields when parent changes
+      if (name === "interestedField") {
+        updated.subField = null;
+        updated.programName = null;
+      } else if (name === "subField") {
+        updated.programName = null;
+      }
+      
+      return updated;
+    });
   };
 
   const handleTextChange = (e) => {
     setSearchParams(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSearch = () => {
-    setHasSearched(true);
+  const filteredResults = useMemo(() => {
     let filtered = universitiesData;
 
     // Filter by Program Level
@@ -209,19 +242,21 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     // Filter by Percentage
     if (searchParams.percentage) {
       const p = parseFloat(searchParams.percentage);
-      filtered = filtered.filter(u => {
-        const reqStr = getFieldValue(u, ['percentage', 'minpercentage']);
-        let finalReq = 0;
-        if(reqStr) {
-          if (typeof reqStr === 'string' && reqStr.includes('%')) {
-             finalReq = parseFloat(reqStr.replace('%',''));
-          } else {
-             const rawNum = parseFloat(reqStr);
-             finalReq = rawNum < 1 ? rawNum * 100 : rawNum;
+      if (!isNaN(p)) {
+        filtered = filtered.filter(u => {
+          const reqStr = getFieldValue(u, ['percentage', 'minpercentage']);
+          let finalReq = 0;
+          if(reqStr) {
+            if (typeof reqStr === 'string' && reqStr.includes('%')) {
+               finalReq = parseFloat(reqStr.replace('%',''));
+            } else {
+               const rawNum = parseFloat(reqStr);
+               finalReq = rawNum < 1 ? rawNum * 100 : rawNum;
+            }
           }
-        }
-        return p >= finalReq;
-      });
+          return p >= finalReq;
+        });
+      }
     }
 
     // Filter by Program Name
@@ -251,8 +286,8 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
       });
     }
 
-    setResults(filtered);
-  };
+    return filtered;
+  }, [universitiesData, searchParams]);
 
   const toggleSelection = (uni) => {
     const uniId = uni.id;
@@ -395,28 +430,29 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
           </div>
         </div>
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-save" onClick={handleSearch} disabled={isLoading} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 25px', width: 'auto', opacity: isLoading ? 0.7 : 1 }}>
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />} 
+          <button className="btn-save" onClick={(e) => e.preventDefault()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 25px', width: 'auto' }}>
+            <Search size={16} /> 
             Search Programs
           </button>
         </div>
       </div>
 
       <div className="widget mt-4" style={{ padding: '0', overflow: 'hidden' }}>
-        <h3 style={{ padding: '20px 20px 0 20px', margin: 0 }}>Search Results</h3>
+        <h3 style={{ padding: '20px 20px 0 20px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Search Results</span>
+          {!isLoading && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{filteredResults.length} programs found</span>}
+        </h3>
         
         {isLoading ? (
           <div className="empty-state" style={{ padding: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
             <Loader2 size={32} className="animate-spin text-accent" style={{ color: 'var(--accent-secondary)' }} />
-            <span className="text-muted">Fetching live data from Google Sheets...</span>
+            <span className="text-muted">Loading.......</span>
           </div>
-        ) : !hasSearched ? (
-          <div className="empty-state" style={{ padding: '30px' }}>Execute a search filter above to display available programs from your database.</div>
-        ) : results.length === 0 ? (
+        ) : filteredResults.length === 0 ? (
           <div className="empty-state" style={{ padding: '30px', color: '#ef4444' }}>No universities matched your specific criteria. Try lowering the percentage or changing filters.</div>
         ) : (
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {results.map((uni, idx) => {
+            {filteredResults.map((uni, idx) => {
               const uniId = uni.id || `fallback_${idx}`;
               const isSelected = selectedUniIds.includes(uniId);
               const otherCols = getOtherColumns(uni);
@@ -427,6 +463,19 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
               const type = uni["Type"] || uni.type || "N/A";
               const ranking = uni["Ranking"] || uni.ranking || "N/A";
               const reqPercentage = uni["percentage"] || uni["Percentage"] || uni.percentage || "0";
+              
+              let displayPercentage = reqPercentage;
+              if (reqPercentage && reqPercentage !== "0") {
+                if (typeof reqPercentage === 'string' && reqPercentage.includes('%')) {
+                  displayPercentage = parseFloat(reqPercentage.replace('%', '')).toString();
+                } else {
+                  const rawNum = parseFloat(reqPercentage);
+                  if (!isNaN(rawNum)) {
+                    displayPercentage = (rawNum < 1 ? Math.round(rawNum * 100) : rawNum).toString();
+                  }
+                }
+              }
+
               const level = uni["program level"] || uni["Program level"] || uni.level || "N/A";
               const interestedField = uni["Interested field"] || uni["interested field"] || uni.interestedField || "N/A";
               const subField = uni["sub field"] || uni["Sub field"] || uni.subField || "N/A";
@@ -462,7 +511,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
                         </h4>
                         <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
                           {location !== "Unknown Location" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {location}</span>}
-                          {reqPercentage !== "0" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {reqPercentage}%</span>}
+                          {reqPercentage !== "0" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {displayPercentage}%</span>}
                           {type !== "N/A" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '2px 8px', borderRadius: '4px' }}>{type}</span>}
                           {ranking !== "N/A" && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '4px' }}>{ranking}</span>}
                         </div>

@@ -110,7 +110,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
       });
 
       if (response.ok) {
-        setMessage({ text: 'Student registered successfully. They can now log in.', type: 'success' });
+        setMessage({ text: 'Student registered successfully.', type: 'success' });
         setFormData({
           firstName: '', lastName: '', email: '', phone: '+91 ', assignedCounselor: null
         });

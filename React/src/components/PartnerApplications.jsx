@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Building, MapPin, GraduationCap, FileText, User, Users, CheckCircle, Phone, CheckSquare } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Building, MapPin, GraduationCap, FileText, User, Users, CheckCircle, Phone, CheckSquare, Filter } from 'lucide-react';
 import StudentDetails from './StudentDetails';
 import { API_BASE_URL } from '../config';
 
@@ -48,6 +48,37 @@ const PartnerApplications = ({ profile, setMessage }) => {
     });
   });
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+
+  const uniqueStudents = useMemo(() => {
+    return Array.from(new Set(allApplications.map(app => app.studentName).filter(Boolean))).sort();
+  }, [allApplications]);
+
+  const uniqueUniversities = useMemo(() => {
+    return Array.from(new Set(allApplications.map(app => app.name).filter(Boolean))).sort();
+  }, [allApplications]);
+
+  const uniqueLocations = useMemo(() => {
+    return Array.from(new Set(allApplications.map(app => app.location).filter(Boolean)));
+  }, [allApplications]);
+
+  const uniqueLevels = useMemo(() => {
+    return Array.from(new Set(allApplications.map(app => app.level).filter(Boolean)));
+  }, [allApplications]);
+
+  const filteredApplications = useMemo(() => {
+    return allApplications.filter(app => {
+      if (searchTerm && app.name && !app.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (studentSearchTerm && app.studentName && !app.studentName.toLowerCase().includes(studentSearchTerm.toLowerCase())) return false;
+      if (locationFilter && app.location !== locationFilter) return false;
+      if (levelFilter && app.level !== levelFilter) return false;
+      return true;
+    });
+  }, [allApplications, searchTerm, studentSearchTerm, locationFilter, levelFilter]);
+
   return (
     <div className="view-standard" style={{ animation: 'fadeIn 0.3s ease' }}>
       <header className="dash-header">
@@ -71,62 +102,102 @@ const PartnerApplications = ({ profile, setMessage }) => {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px', marginTop: '20px' }}>
-          {allApplications.map((app, idx) => (
-            <div key={idx} className="widget" style={{ padding: '0', overflow: 'hidden', border: '1px solid var(--accent-secondary)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.05)', borderBottom: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-main)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Building size={18} className="text-muted" /> {app.name}
-                  </h3>
-                </div>
-                <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {app.location}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {app.minPercentage}%</span>
-                </div>
+        <>
+          <div className="widget" style={{ marginBottom: '20px', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+              <Filter size={18} /> Filter Ledger
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+              <div style={{ position: 'relative' }}>
+                <Building size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <select className="theme-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ paddingLeft: '35px', width: '100%', boxSizing: 'border-box' }}>
+                  <option value="">All Universities</option>
+                  {uniqueUniversities.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
               </div>
-              
-              <div style={{ padding: '20px', flex: 1, background: 'var(--card-bg-solid)' }}>
-                
-                {/* APPLICANT INFO */}
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applicant Details</h4>
-                <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem', marginBottom: '15px' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontWeight: 600 }}>
-                      <User size={14} className="text-muted" /> {app.studentName}
-                   </div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
-                      <Phone size={14} className="text-muted" /> {app.studentPhone}
-                   </div>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed var(--glass-border)' }}>
-                     <span style={{ color: 'var(--text-muted)' }}>Counselor</span>
-                     <span style={{ color: 'var(--text-main)' }}>{app.counselorName}</span>
-                   </div>
-                </div>
-
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applied Programs</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {app.programs && app.programs.map((prog, pIdx) => (
-                    <div key={pIdx} style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                      <CheckSquare size={14} className="text-muted" />
-                      {prog}
-                    </div>
-                  ))}
-                </div>
-                
-                <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px dashed var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</span>
-                     <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.85rem' }}>Finalized</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'right' }}>
-                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Level</span>
-                     <span style={{ color: 'var(--text-main)', fontWeight: 600, fontSize: '0.85rem' }}>{app.level}</span>
-                  </div>
-                </div>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <select className="theme-input" value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} style={{ paddingLeft: '35px', width: '100%', boxSizing: 'border-box' }}>
+                  <option value="">All Students</option>
+                  {uniqueStudents.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
               </div>
+              <select className="theme-input" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} style={{ width: '100%' }}>
+                <option value="">All Locations</option>
+                {uniqueLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+              </select>
+              <select className="theme-input" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} style={{ width: '100%' }}>
+                <option value="">All Levels</option>
+                {uniqueLevels.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+              </select>
             </div>
-          ))}
-        </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn-save" onClick={(e) => e.preventDefault()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 25px', width: 'auto' }}>
+                <Search size={16} /> 
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {filteredApplications.length === 0 ? (
+              <div className="empty-state" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No applications match your filter criteria.
+              </div>
+            ) : (
+              filteredApplications.map((app, idx) => (
+                <div key={idx} className="widget hover:border-[var(--accent-secondary)]" style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', border: '1px solid var(--glass-border)', transition: 'all 0.2s ease', background: 'var(--bg-secondary)' }}>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ flex: '1 1 auto' }}>
+                      <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Building size={20} className="text-muted" /> {app.name}
+                      </h4>
+                      <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {app.location && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {app.location}</span>}
+                        {app.minPercentage && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {app.minPercentage}%</span>}
+                        {app.level && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px' }}>{app.level}</span>}
+                      </div>
+
+                      <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600 }}>
+                            <User size={16} className="text-muted" /> {app.studentName}
+                         </div>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                            <Phone size={14} className="text-muted" /> {app.studentPhone}
+                         </div>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem', borderLeft: '1px solid var(--glass-border)', paddingLeft: '10px' }}>
+                            Counselor: <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{app.counselorName}</span>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 600, background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                        <CheckSquare size={14} /> Finalized
+                      </span>
+                    </div>
+                  </div>
+
+                  {app.programs && app.programs.length > 0 && (
+                    <div style={{ marginTop: '5px', paddingTop: '15px', borderTop: '1px dashed var(--glass-border)' }}>
+                      <h5 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applied Programs</h5>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {app.programs.map((prog, pIdx) => (
+                          <div key={pIdx} style={{ background: 'var(--input-bg)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                            <CheckSquare size={14} className="text-muted" />
+                            {prog}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

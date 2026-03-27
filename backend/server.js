@@ -33,6 +33,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/erp', require('./routes/erp'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/send-student-docs', require('./routes/studentDocs'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Serve static React Frontend builds
 app.use(express.static(path.join(__dirname, '../React/dist')));

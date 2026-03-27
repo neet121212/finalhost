@@ -76,11 +76,14 @@ router.post('/', upload.array('files'), async (req, res) => {
             ]
         };
 
-        // Send the email
+        // Send the email (Temporarily disabled by admin request)
+        /*
         await transporter.sendMail(mailOptions);
-        
         console.log(`Successfully zipped and emailed documents for student: ${studentName}`);
-        res.status(200).json({ message: 'Documents successfully zipped and sent!' });
+        */
+        
+        console.log(`Email sending for student documents is temporarily disabled. (Student: ${studentName})`);
+        res.status(200).json({ message: 'Documents processing sequence completed (Email disabled by Admin)!' });
 
     } catch (err) {
         console.error('Error processing student documents:', err);

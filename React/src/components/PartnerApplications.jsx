@@ -38,12 +38,21 @@ const PartnerApplications = ({ profile, setMessage }) => {
   students.forEach(student => {
     const validApps = (student.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
     validApps.forEach(app => {
+      // Determine label: Who is the primary counselor for this record?
+      let counselorLabel = 'Direct';
+      
+      if (student.createdByCounselor) {
+        counselorLabel = `${student.createdByCounselor.firstName} ${student.createdByCounselor.lastName || ''}`;
+      } else if (student.assignedCounselor) {
+        counselorLabel = `${student.assignedCounselor.firstName} ${student.assignedCounselor.lastName || ''}`;
+      }
+
       allApplications.push({
         ...app,
         studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
         studentEmail: student.email,
         studentPhone: student.phone,
-        counselorName: student.assignedCounselor ? student.assignedCounselor.name : 'Unassigned',
+        counselorName: counselorLabel,
       });
     });
   });
@@ -167,7 +176,7 @@ const PartnerApplications = ({ profile, setMessage }) => {
                             <Phone size={14} className="text-muted" /> {app.studentPhone}
                          </div>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem', borderLeft: '1px solid var(--glass-border)', paddingLeft: '10px' }}>
-                            Counselor: <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{app.counselorName}</span>
+                            Submitted By: <span style={{ color: 'var(--text-main)', fontWeight: 500, background: 'var(--glass-bg)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--accent-secondary)' }}>{app.counselorName}</span>
                          </div>
                       </div>
                     </div>

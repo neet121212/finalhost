@@ -100,7 +100,7 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
           <h3 style={{ margin: '0 0 20px 0', border: 'none', padding: 0 }}>⚡ Quick Actions</h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {isPartner && (
+            {(isPartner || profile.role === 'counselor') && (
               <button 
                 onClick={() => setActiveTab('register-student')}
                 style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
@@ -125,7 +125,7 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
               <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Explore Courses</span>
             </button>
 
-            {isPartner && (
+            {(isPartner || profile.role === 'counselor') && (
               <button 
                 onClick={() => setActiveTab('students-list')}
                 style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}

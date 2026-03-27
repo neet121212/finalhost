@@ -144,6 +144,8 @@ const Dashboard = () => {
   }
 
   const isPartner = profile.role === 'partner';
+  const isCounselor = profile.role === 'counselor';
+  const isStudent = profile.role === 'student';
 
   // Sidebar link generator
   const NavButton = ({ id, icon: Icon, label }) => {
@@ -184,7 +186,9 @@ const Dashboard = () => {
             </div>
             {isSidebarOpen && (
               <div style={{ animation: 'fadeIn 0.3s ease', marginTop: '0.5rem', marginLeft: '0.2rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>{isPartner ? 'Partner Portal' : 'Student Portal'}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-secondary)', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '1px' }}>
+                  {isPartner ? 'Partner Portal' : isCounselor ? 'Counselor Portal' : 'Student Portal'}
+                </span>
               </div>
             )}
           </div>
@@ -193,7 +197,7 @@ const Dashboard = () => {
             <NavButton id="home" icon={Home} label="Dashboard" />
 
             {/* Student specific tabs */}
-            {!isPartner && (
+            {isStudent && (
               <>
                 <NavButton id="course-finder" icon={Search} label="Course Finder" />
                 <NavButton id="applications" icon={FileText} label=" Application" />
@@ -218,6 +222,17 @@ const Dashboard = () => {
               </>
             )}
 
+            {/* Counselor specific tabs */}
+            {isCounselor && (
+              <>
+                <NavButton id="register-student" icon={User} label="Register New Student" />
+                <NavButton id="students-list" icon={Users} label="My Students" />
+                <NavButton id="course-finder" icon={Search} label="Search Program" />
+                <NavButton id="partner-applications" icon={FileText} label="Applied Applications" />
+                <NavButton id="profile" icon={User} label="My Account" />
+              </>
+            )}
+
             <div className="nav-divider"></div>
 
             <button className={`nav-item logout-btn ${!isSidebarOpen ? 'icon-only' : ''}`} onClick={handleLogout} style={{ justifyContent: !isSidebarOpen ? 'center' : 'flex-start' }} title={!isSidebarOpen ? 'Logout' : ''}>
@@ -230,7 +245,7 @@ const Dashboard = () => {
             <div className="avatar" style={{ minWidth: '40px' }}>{profile.firstName ? profile.firstName.charAt(0).toUpperCase() : 'U'}</div>
             <div className="user-info">
               <span className="name">{profile.firstName} {profile.lastName || ''}</span>
-              <span className="role">{isPartner ? profile.companyName || 'Partner' : 'Student'}</span>
+              <span className="role">{isPartner ? profile.companyName || 'Partner' : isCounselor ? 'Counselor' : 'Student'}</span>
             </div>
           </div>
         </aside>
@@ -321,7 +336,7 @@ const Dashboard = () => {
             {/* VIEW: APPLICATIONS                 */}
             {/* ================================== */}
             {activeTab === 'applications' && (
-              !isPartner && (
+              isStudent && (
                 <StudentDetails 
                   student={profile} 
                   goBack={() => setActiveTab('home')} 
@@ -342,7 +357,7 @@ const Dashboard = () => {
             {/* ================================== */}
             {/* VIEW: PARTNER APPLICATIONS         */}
             {/* ================================== */}
-            {activeTab === 'partner-applications' && isPartner && (
+            {activeTab === 'partner-applications' && (isPartner || isCounselor) && (
               <PartnerApplications profile={profile} setMessage={setMessage} />
             )}
 
@@ -369,7 +384,7 @@ const Dashboard = () => {
                 preselectedUnis={pendingApplications}
                 onProceed={(selected) => {
                   setPendingApplications(selected);
-                  if (isPartner) {
+                  if (isPartner || isCounselor) {
                     setActiveTab('students-list');
                   } else {
                     setActiveTab('applications');

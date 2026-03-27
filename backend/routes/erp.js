@@ -47,15 +47,19 @@ router.get('/stats', auth, async (req, res) => {
 // =======================
 // COUNSELORS CRUD
 // =======================
-// Get all counselors
+// Get all counselors under a partner
 router.get('/counselors', auth, async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
-    let query = {};
+    let query = { role: 'counselor' };
+    
+    // If Partner, only see their own counselors
     if (currentUser && currentUser.role === 'partner') {
-      query.registeredBy = currentUser._id;
+      query.parentPartner = currentUser._id;
     }
-    const counselors = await Counselor.find(query).sort({ createdAt: -1 });
+    
+    // Optionally return counselors array for admins too
+    const counselors = await User.find(query).sort({ createdAt: -1 });
     res.json(counselors);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch counselors" });
@@ -65,14 +69,38 @@ router.get('/counselors', auth, async (req, res) => {
 // Add new counselor
 router.post('/counselors', auth, async (req, res) => {
   try {
-    const { name, email, phone, specialty } = req.body;
-    const existing = await Counselor.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Counselor email already exists" });
+    const { name, email, phone, speciality, password } = req.body;
+    
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ error: "Email already exists in system" });
 
-    const counselor = new Counselor({ name, email, phone, specialty, registeredBy: req.user.id });
+    if (!password) {
+       return res.status(400).json({ error: "Password is required for Counselor accounts" });
+    }
+
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const parts = name.split(' ');
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(' ') || '';
+
+    const counselor = new User({ 
+      firstName, 
+      lastName, 
+      email, 
+      phone: phone || "+91", 
+      speciality, 
+      password: hashedPassword,
+      role: 'counselor',
+      parentPartner: req.user.id,
+      registeredBy: req.user.id
+    });
+    
     await counselor.save();
     res.status(201).json(counselor);
   } catch (err) {
+    console.error("[ERP ERROR]", err);
     res.status(500).json({ error: "Failed to add counselor" });
   }
 });
@@ -80,17 +108,17 @@ router.post('/counselors', auth, async (req, res) => {
 // Delete counselor
 router.delete('/counselors/:id', auth, async (req, res) => {
   try {
-    const counselor = await Counselor.findById(req.params.id);
+    const counselor = await User.findOne({ _id: req.params.id, role: 'counselor' });
     if (!counselor) return res.status(404).json({ error: "Counselor not found" });
 
     const currentUser = await User.findById(req.user.id);
     if (currentUser && currentUser.role === 'partner') {
-      if (counselor.registeredBy && counselor.registeredBy.toString() !== currentUser._id.toString()) {
+      if (counselor.parentPartner && counselor.parentPartner.toString() !== currentUser._id.toString()) {
         return res.status(403).json({ error: "Unauthorized access to Counselor profile" });
       }
     }
 
-    await Counselor.findByIdAndDelete(req.params.id);
+    await User.findByIdAndDelete(req.params.id);
 
     // Optional: Unassign this counselor from all students
     await User.updateMany({ assignedCounselor: req.params.id }, { $unset: { assignedCounselor: 1 } });
@@ -112,8 +140,19 @@ router.get('/students', auth, async (req, res) => {
     
     let query = { role: 'student' };
     
+    // Visibility Scoping
     if (currentUser && currentUser.role === 'partner') {
+      // Partner sees students they registered DIRECTLY OR students registered by their counselors
       query.registeredBy = currentUser._id;
+    } else if (currentUser && currentUser.role === 'counselor') {
+      // Counselors ONLY see students explicitly assigned to them or created by them
+      query = { 
+        ...query, 
+        $or: [
+          { assignedCounselor: currentUser._id },
+          { createdByCounselor: currentUser._id }
+        ]
+      };
     }
     
     if (country) query.country = { $regex: new RegExp(country, 'i') };
@@ -125,7 +164,7 @@ router.get('/students', auth, async (req, res) => {
       query.assignedCounselor = { $exists: false }; // or null
     }
 
-    const students = await User.find(query).populate('assignedCounselor', 'name email').sort({ createdAt: -1 });
+    const students = await User.find(query).populate('assignedCounselor', 'firstName lastName email').populate('createdByCounselor', 'firstName lastName').sort({ createdAt: -1 });
     res.json(students);
   } catch (err) {
     console.error(err);
@@ -133,7 +172,7 @@ router.get('/students', auth, async (req, res) => {
   }
 });
 
-// Partner Register New Student Lead
+// Partner OR Counselor Register New Student Lead
 router.post('/students', auth, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, country, state, city, offerStatus, assignedCounselor } = req.body;
@@ -151,15 +190,27 @@ router.post('/students', auth, async (req, res) => {
     // Generate credentials
     const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash('StudentPass123!', 10);
+    
+    const currentUser = await User.findById(req.user.id);
 
     const studentData = {
       firstName, lastName, email, phone, country, state, city,
       offerStatus: offerStatus || 'Pending',
-      assignedCounselor: assignedCounselor || undefined,
       password: hashedPassword,
       role: 'student',
-      registeredBy: req.user.id
     };
+    
+    // Mapping logic based on creator's role
+    if (currentUser.role === 'counselor') {
+      // Counselor creates the student
+      studentData.createdByCounselor = currentUser._id;
+      studentData.assignedCounselor = currentUser._id;
+      studentData.registeredBy = currentUser.parentPartner; // Roll up to the Partner
+    } else {
+      // Partner (or Admin) creates the student
+      studentData.registeredBy = currentUser._id;
+      studentData.assignedCounselor = assignedCounselor || undefined;
+    }
 
     const student = new User(studentData);
     await student.save();

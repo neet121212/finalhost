@@ -154,15 +154,17 @@ const RegisterStudent = ({ profile, setMessage }) => {
             <input type="tel" name="phone" value={formData.phone} onChange={enforcePhonePrefix} required className="dash-input" />
           </div>
           
-          <div className="dash-input-group" style={{ zIndex: 100 }}>
-            <label>Assigned Counselor</label>
-            <Select 
-              name="assignedCounselor" value={formData.assignedCounselor} onChange={handleSelectChange} 
-              options={assignOptions} styles={{ ...customSelectStyles, menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-              menuPortalTarget={document.body}
-              placeholder="Select Counselor" isSearchable
-            />
-          </div>
+          {profile.role !== 'counselor' && (
+            <div className="dash-input-group" style={{ zIndex: 100 }}>
+              <label>Assigned Counselor</label>
+              <Select 
+                name="assignedCounselor" value={formData.assignedCounselor} onChange={handleSelectChange} 
+                options={assignOptions} styles={{ ...customSelectStyles, menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                menuPortalTarget={document.body}
+                placeholder="Select Counselor" isSearchable
+              />
+            </div>
+          )}
 
           <div className="edit-actions" style={{ gridColumn: '1 / -1', marginTop: '10px', paddingTop: '15px' }}>
             <button type="submit" className="btn-save" style={{ padding: '12px 24px', fontSize: '1rem' }}><Save size={18} /> Save Student Record</button>

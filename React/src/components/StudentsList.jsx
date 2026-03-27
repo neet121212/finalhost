@@ -49,7 +49,7 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
 
   const assignOptions = [
     { value: '', label: 'Unassigned' },
-    ...counselors.map(c => ({ value: c._id, label: `${c.name} (${c.specialty})` }))
+    ...counselors.map(c => ({ value: c._id, label: `${c.firstName} ${c.lastName || ''} (${c.speciality || 'General'})` }))
   ];
 
   const offerStatusOptions = [
@@ -190,7 +190,7 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
         student={selectedStudentDetails} 
         pendingApplications={pendingApplications}
         setPendingApplications={setPendingApplications}
-        isPartnerView={true}
+        isPartnerView={profile.role === 'partner' || profile.role === 'counselor'}
         goBack={() => { setSelectedStudentDetails(null); fetchStudents(); }} 
         refreshProfile={fetchStudents}
       />
@@ -259,7 +259,7 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
               <th style={{padding: '15px'}}>Location</th>
               <th style={{padding: '15px'}}>Contact</th>
               <th style={{padding: '15px'}}>Offer Letter Status</th>
-              <th style={{padding: '15px'}}>Assigned Counselor</th>
+              {profile.role !== 'counselor' && <th style={{padding: '15px'}}>Assigned Counselor</th>}
               <th style={{padding: '15px', textAlign: 'center'}}>Actions</th>
             </tr>
           </thead>
@@ -320,6 +320,11 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
                     <td style={{padding: '15px'}}>
                       <div style={{fontWeight: '600'}}>{s.firstName} {s.lastName}</div>
                       <div style={{fontSize: '0.8rem'}} className="text-muted">{s.email}</div>
+                      {s.createdByCounselor && profile.role === 'partner' && (
+                        <div style={{fontSize: '0.75rem', color: 'var(--accent-secondary)', marginTop: '4px', background: 'rgba(59, 130, 246, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block'}}>
+                          Registered by: {s.createdByCounselor.firstName}
+                        </div>
+                      )}
                     </td>
                     <td style={{padding: '15px', color: 'var(--text-main)'}}>
                       {s.city}, {s.state}<br/>
@@ -339,16 +344,18 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
                         isSearchable={false}
                       />
                     </td>
-                    <td style={{padding: '15px'}} onClick={(e) => e.stopPropagation()}>
-                      <Select 
-                        menuPortalTarget={document.body}
-                        options={assignOptions}
-                        value={currentCounselor}
-                        onChange={(val) => handleAssignCounselor(s._id, val)}
-                        styles={{...customSelectStyles, control: (b,st) => ({...customSelectStyles.control(b,st), minWidth: '160px', fontSize: '0.85rem'})}}
-                        isSearchable={true}
-                      />
-                    </td>
+                    {profile.role !== 'counselor' && (
+                      <td style={{padding: '15px'}} onClick={(e) => e.stopPropagation()}>
+                        <Select 
+                          menuPortalTarget={document.body}
+                          options={assignOptions}
+                          value={currentCounselor}
+                          onChange={(val) => handleAssignCounselor(s._id, val)}
+                          styles={{...customSelectStyles, control: (b,st) => ({...customSelectStyles.control(b,st), minWidth: '160px', fontSize: '0.85rem'})}}
+                          isSearchable={true}
+                        />
+                      </td>
+                    )}
                     <td style={{padding: '15px', textAlign: 'center'}} onClick={(e) => e.stopPropagation()}>
                       <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
                         <button onClick={(e) => { e.stopPropagation(); handleEditClick(s); }} style={{background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', opacity: '0.8'}} title="Edit Student">

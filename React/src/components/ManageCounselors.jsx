@@ -9,7 +9,7 @@ const ALLOWED_COUNTRIES = []; // Deprecated, enabling global support
 const ManageCounselors = ({ setMessage }) => {
   const [counselors, setCounselors] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '+91 ', specialty: '', country: null });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '+91 ', speciality: '', country: null, password: '' });
 
   useEffect(() => {
     fetchCounselors();
@@ -102,7 +102,7 @@ const ManageCounselors = ({ setMessage }) => {
       });
       if (response.ok) {
         setMessage({ text: 'Counselor added successfully.', type: 'success' });
-        setFormData({ name: '', email: '', phone: '+91 ', specialty: '', country: null });
+        setFormData({ name: '', email: '', phone: '+91 ', speciality: '', country: null, password: '' });
         fetchCounselors();
       } else {
         const data = await response.json();
@@ -140,34 +140,47 @@ const ManageCounselors = ({ setMessage }) => {
         </div>
       </header>
 
-      <div className="widget" style={{ marginBottom: '20px' }}>
-        <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr) 100px 1.5fr 1fr auto', gap: '10px', alignItems: 'end' }}>
+      <div className="widget" style={{ marginBottom: '20px', padding: '25px' }}>
+        <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'end' }}>
           <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '5px'}}>Full Name</label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="theme-input" />
+            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Full Name</label>
+            <input type="text" name="name" value={formData.name} onChange={handleChange} required className="theme-input" placeholder="Enter name" />
           </div>
           <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '5px'}}>Email Address</label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} required className="theme-input" />
+            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Email Address</label>
+            <input type="email" name="email" value={formData.email} onChange={handleChange} required className="theme-input" placeholder="counselor@example.com" />
           </div>
           <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '5px'}}>Prefix</label>
-            <Select 
-              name="country" value={formData.country} onChange={handleSelectChange} 
-              options={countries} styles={customSelectStyles}
-              menuPortalTarget={document.body}
-              placeholder="IN" isSearchable={false}
-            />
+            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Password</label>
+            <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Set access password" className="theme-input" />
           </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '10px' }}>
+            <div>
+              <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Prefix</label>
+              <Select 
+                name="country" value={formData.country} onChange={handleSelectChange} 
+                options={countries} styles={customSelectStyles}
+                menuPortalTarget={document.body}
+                placeholder="IN" isSearchable={false}
+              />
+            </div>
+            <div>
+              <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Phone Number</label>
+              <input type="text" name="phone" value={formData.phone} onChange={enforcePhonePrefix} required className="theme-input" />
+            </div>
+          </div>
+
           <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '5px'}}>Phone Number</label>
-            <input type="text" name="phone" value={formData.phone} onChange={enforcePhonePrefix} required className="theme-input" />
+            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Speciality</label>
+            <input type="text" name="speciality" value={formData.speciality} onChange={handleChange} placeholder="e.g. UK Visas, Admissions" className="theme-input" />
           </div>
-          <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '5px'}}>Specialty</label>
-            <input type="text" name="specialty" value={formData.specialty} onChange={handleChange} placeholder="e.g. UK Visas" className="theme-input" />
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn-primary" style={{ padding: '0 30px', height: '42px', borderRadius: '10px', fontWeight: 600, width: '100%' }}>
+              Add New Counselor
+            </button>
           </div>
-          <button type="submit" className="btn-primary" style={{padding: '8px 20px', height: '37px'}}>Add</button>
         </form>
       </div>
 
@@ -178,19 +191,28 @@ const ManageCounselors = ({ setMessage }) => {
               <th style={{padding: '10px'}}>Name</th>
               <th style={{padding: '10px'}}>Email</th>
               <th style={{padding: '10px'}}>Phone</th>
-              <th style={{padding: '10px'}}>Specialty</th>
+              <th style={{padding: '10px'}}>Speciality</th>
               <th style={{padding: '10px', width: '50px'}}></th>
             </tr>
           </thead>
           <tbody>
             {counselors.map(c => (
               <tr key={c._id} className="theme-row-border">
-                <td style={{padding: '10px'}}>{c.name}</td>
+                <td style={{padding: '10px'}}>{c.firstName} {c.lastName || ''}</td>
                 <td style={{padding: '10px'}} className="text-muted">{c.email}</td>
                 <td style={{padding: '10px'}} className="text-muted">{c.phone}</td>
                 <td style={{padding: '10px'}}>
-                  <span style={{background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem'}}>
-                    {c.specialty}
+                  <span style={{ 
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))', 
+                    color: '#a855f7', 
+                    padding: '4px 12px', 
+                    borderRadius: '20px', 
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    border: '1px solid rgba(168, 85, 247, 0.2)',
+                    display: 'inline-block'
+                  }}>
+                    {c.speciality || 'General'}
                   </span>
                 </td>
                 <td style={{padding: '10px', textAlign: 'center'}}>

@@ -83,7 +83,7 @@ const UserSchema = new mongoose.Schema({
   whatsapp: { type: String, required: false },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['student', 'partner', 'admin'], default: 'student' },
+  role: { type: String, enum: ['student', 'partner', 'admin', 'counselor'], default: 'student' },
   
   // Partner specific fields (Optional for students)
   companyName: { type: String },
@@ -93,11 +93,14 @@ const UserSchema = new mongoose.Schema({
   designation: { type: String },
   studentUniqueId: { type: String },
   
-  assignedCounselor: { type: mongoose.Schema.Types.ObjectId, ref: 'Counselor' },
+  assignedCounselor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   registeredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  parentPartner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // For counselors to link back to the Partner who made them
+  createdByCounselor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // For students explicitly registered by a counselor
+  speciality: { type: String }, // For Counselor role
   applications: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Application' }],
   appliedUniversities: [new mongoose.Schema({
-    id: Number,
+    id: mongoose.Schema.Types.Mixed,
     name: String,
     location: String,
     level: String,

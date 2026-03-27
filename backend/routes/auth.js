@@ -157,8 +157,10 @@ router.post('/partner-request', async (req, res) => {
         `
     };
 
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Partner registration request sent successfully" });
+    // Temporarily disabled by admin request
+    // await transporter.sendMail(mailOptions);
+    console.log(`Email sending for partner request is temporarily disabled. (Email: ${email})`);
+    res.status(200).json({ message: "Partner registration request received (Email disabled by Admin)" });
   } catch (err) {
     console.error("Partner request error:", err);
     res.status(500).json({ error: "Server error sending request" });

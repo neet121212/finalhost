@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Building, GraduationCap, ExternalLink, Filter, Database, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, MapPin, Building, GraduationCap, ExternalLink, Filter, Database, Loader2, CalendarClock } from 'lucide-react';
 import Select from 'react-select';
 
 // ==========================================
@@ -40,13 +40,28 @@ const sampleSheetData = [
   }
 ];
 
+// Helper to reliably find object properties regardless of case/spacing
+const getFieldValue = (item, possibleKeys) => {
+  if (!item) return null;
+  const itemKeys = Object.keys(item);
+  const normalizedPossibles = possibleKeys.map(k => k.toLowerCase().replace(/[\s_.-]+/g, ''));
+  
+  for (let key of itemKeys) {
+    const normalizedKey = key.toLowerCase().replace(/[\s_.-]+/g, '');
+    if (normalizedPossibles.includes(normalizedKey)) {
+      return item[key];
+    }
+  }
+  return null;
+};
+
 const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, proceedLabel = "Proceed to Apply", onSelectionChange }) => {
   const [searchParams, setSearchParams] = useState({
     programLevel: null,
-    programName: '',
+    programName: null,
     percentage: '',
-    interestedField: '',
-    subField: ''
+    interestedField: null,
+    subField: null
   });
   const [universitiesData, setUniversitiesData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,12 +112,41 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     fetchData();
   }, []);
 
-  const levelOptions = [
+  // --- Dynamic Dropdown Options Generation ---
+  const extractUniqueOptions = (data, keys) => {
+    const rawSet = new Set();
+    data.forEach(item => {
+      const val = getFieldValue(item, keys);
+      if (val !== null && val !== undefined) {
+        if (typeof val === 'string' && val.trim() !== '') {
+          rawSet.add(val.trim());
+        } else if (typeof val === 'number') {
+          rawSet.add(val.toString().trim());
+        }
+      }
+    });
+    return Array.from(rawSet).sort().map(val => ({ value: val, label: val }));
+  };
+
+  const levelOptions = useMemo(() => [
     { value: '', label: 'Any Level' },
-    { value: 'UG', label: 'Undergraduate (UG)' },
-    { value: 'PG', label: 'Postgraduate (PG)' },
-    { value: 'PHD', label: 'Doctorate (PhD)' }
-  ];
+    ...extractUniqueOptions(universitiesData, ['programlevel', 'level'])
+  ], [universitiesData]);
+
+  const interestedFieldOptions = useMemo(() => [
+    { value: '', label: 'Any Interested Field' },
+    ...extractUniqueOptions(universitiesData, ['interestedfield'])
+  ], [universitiesData]);
+
+  const subFieldOptions = useMemo(() => [
+    { value: '', label: 'Any Sub Field' },
+    ...extractUniqueOptions(universitiesData, ['subfield'])
+  ], [universitiesData]);
+
+  const programNameOptions = useMemo(() => [
+    { value: '', label: 'Any Program' },
+    ...extractUniqueOptions(universitiesData, ['programname', 'program', 'name'])
+  ], [universitiesData]);
 
   const customSelectStyles = {
     control: (base, state) => ({
@@ -141,12 +185,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     dropdownIndicator: (base) => ({ ...base, color: 'var(--text-muted)' }),
   };
 
-  const handleChange = (e) => {
-    setSearchParams({ ...searchParams, [e.target.name]: e.target.value });
+  const handleSelectChange = (name, selectedOption) => {
+    setSearchParams(prev => ({ ...prev, [name]: selectedOption }));
   };
 
-  const handleLevelChange = (selectedOption) => {
-    setSearchParams({ ...searchParams, programLevel: selectedOption });
+  const handleTextChange = (e) => {
+    setSearchParams(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSearch = () => {
@@ -157,7 +201,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     if (searchParams.programLevel && searchParams.programLevel.value) {
       const qLevel = searchParams.programLevel.value.toLowerCase();
       filtered = filtered.filter(u => {
-        const uLevel = (u["program level"] || u["Program level"] || u.level || "").toLowerCase();
+        const uLevel = (getFieldValue(u, ['programlevel', 'level']) || "").toLowerCase();
         return uLevel.includes(qLevel);
       });
     }
@@ -166,34 +210,43 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     if (searchParams.percentage) {
       const p = parseFloat(searchParams.percentage);
       filtered = filtered.filter(u => {
-        const req = parseFloat(u["percentage"] || u["Percentage"] || u.percentage || 0);
-        return p >= req;
+        const reqStr = getFieldValue(u, ['percentage', 'minpercentage']);
+        let finalReq = 0;
+        if(reqStr) {
+          if (typeof reqStr === 'string' && reqStr.includes('%')) {
+             finalReq = parseFloat(reqStr.replace('%',''));
+          } else {
+             const rawNum = parseFloat(reqStr);
+             finalReq = rawNum < 1 ? rawNum * 100 : rawNum;
+          }
+        }
+        return p >= finalReq;
       });
     }
 
     // Filter by Program Name
-    if (searchParams.programName) {
-      const q = searchParams.programName.toLowerCase();
+    if (searchParams.programName && searchParams.programName.value) {
+      const q = searchParams.programName.value.toLowerCase();
       filtered = filtered.filter(u => {
-        const uProg = (u["program name"] || u["Program name"] || u.program || u.name || "").toLowerCase();
+        const uProg = (getFieldValue(u, ['programname', 'program', 'name']) || "").toLowerCase();
         return uProg.includes(q);
       });
     }
 
     // Filter by Interested Field
-    if (searchParams.interestedField) {
-      const q = searchParams.interestedField.toLowerCase();
+    if (searchParams.interestedField && searchParams.interestedField.value) {
+      const q = searchParams.interestedField.value.toLowerCase();
       filtered = filtered.filter(u => {
-        const field = (u["Interested field"] || u["interested field"] || u.interestedField || "").toLowerCase();
+        const field = (getFieldValue(u, ['interestedfield']) || "").toLowerCase();
         return field.includes(q);
       });
     }
 
     // Filter by Sub Field
-    if (searchParams.subField) {
-      const q = searchParams.subField.toLowerCase();
+    if (searchParams.subField && searchParams.subField.value) {
+      const q = searchParams.subField.value.toLowerCase();
       filtered = filtered.filter(u => {
-        const field = (u["sub field"] || u["Sub field"] || u.subField || "").toLowerCase();
+        const field = (getFieldValue(u, ['subfield']) || "").toLowerCase();
         return field.includes(q);
       });
     }
@@ -210,16 +263,15 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     );
 
     if (onSelectionChange) {
-      // Create a standard structure object for the rest of the app to understand
       const standardizedUni = {
         id: uni.id,
-        name: uni["University Name"] || uni["university name"] || uni.name || "Unknown University",
-        location: uni["Location"] || uni.location || "Unknown Location",
-        level: uni["program level"] || uni["Program level"] || uni.level || "N/A",
-        minPercentage: uni["percentage"] || uni["Percentage"] || uni.percentage || 0,
-        type: uni["Type"] || uni.type || "N/A",
-        ranking: uni["Ranking"] || uni.ranking || "N/A",
-        programs: [uni["program name"] || uni["Program name"] || uni.program || uni.name || "Unknown Program"]
+        name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
+        location: getFieldValue(uni, ['location']) || "Unknown Location",
+        level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
+        minPercentage: getFieldValue(uni, ['percentage']) || 0,
+        type: getFieldValue(uni, ['type']) || "N/A",
+        ranking: getFieldValue(uni, ['ranking']) || "N/A",
+        programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"]
       };
       onSelectionChange(standardizedUni, isNowSelected);
     }
@@ -228,17 +280,16 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   const handleProceedWithSelected = (e) => {
     if (e) e.stopPropagation();
     if (onProceed && selectedUniIds.length > 0) {
-      // Pass the selected universities structured for existing pipelines
       const selected = universitiesData.filter(u => selectedUniIds.includes(u.id)).map(uni => ({
         id: uni.id,
-        name: uni["University Name"] || uni["university name"] || uni.name || "Unknown University",
-        location: uni["Location"] || uni.location || "Unknown Location",
-        level: uni["program level"] || uni["Program level"] || uni.level || "N/A",
-        minPercentage: uni["percentage"] || uni["Percentage"] || uni.percentage || 0,
-        type: uni["Type"] || uni.type || "N/A",
-        ranking: uni["Ranking"] || uni.ranking || "N/A",
-        programs: [uni["program name"] || uni["Program name"] || uni.program || uni.name || "Unknown Program"],
-        rawSheetData: uni // pass the full object in case its needed
+        name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
+        location: getFieldValue(uni, ['location']) || "Unknown Location",
+        level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
+        minPercentage: getFieldValue(uni, ['percentage']) || 0,
+        type: getFieldValue(uni, ['type']) || "N/A",
+        ranking: getFieldValue(uni, ['ranking']) || "N/A",
+        programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"],
+        rawSheetData: uni 
       }));
       onProceed(selected);
     }
@@ -246,16 +297,23 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
 
   // Helper to extract non-standard columns for display
   const getOtherColumns = (uni) => {
-    const standardKeys = [
-      "id", "University Name", "university name", "name", 
-      "Location", "location", "Type", "type", "Ranking", "ranking", 
-      "percentage", "Percentage", "minPercentage", 
-      "program level", "Program level", "level", 
-      "Interested field", "interested field", "interestedField",
-      "sub field", "Sub field", "subField",
-      "program name", "Program name", "program", "rawSheetData"
+    const standardKeysNormalized = [
+      "id", "universityname", "name", 
+      "location", "type", "ranking", 
+      "percentage", "minpercentage", 
+      "programlevel", "level", 
+      "interestedfield",
+      "subfield",
+      "programname", "program", "rawsheetdata",
+      "sno" // Hide S.NO entirely
     ];
-    return Object.keys(uni).filter(key => !standardKeys.includes(key) && uni[key] !== null && uni[key] !== undefined && uni[key] !== "");
+    return Object.keys(uni).filter(key => {
+      const normKey = key.toLowerCase().replace(/[\s_.-]+/g, '');
+      return !standardKeysNormalized.includes(normKey) && 
+             uni[key] !== null && 
+             uni[key] !== undefined && 
+             uni[key] !== "";
+    });
   };
 
   return (
@@ -288,29 +346,52 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
             <Select 
               name="programLevel" 
               value={searchParams.programLevel} 
-              onChange={handleLevelChange} 
+              onChange={(val) => handleSelectChange("programLevel", val)} 
               options={levelOptions} 
               styles={customSelectStyles}
               menuPortalTarget={document.body}
-              placeholder="Any Level" 
-              isSearchable={false}
+              placeholder="Select Level" 
             />
           </div>
           <div>
             <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px'}}>Interested Field</label>
-            <input type="text" name="interestedField" value={searchParams.interestedField} onChange={handleChange} placeholder="e.g. Engineering, Business" className="theme-input" />
+            <Select 
+              name="interestedField" 
+              value={searchParams.interestedField} 
+              onChange={(val) => handleSelectChange("interestedField", val)} 
+              options={interestedFieldOptions} 
+              styles={customSelectStyles}
+              menuPortalTarget={document.body}
+              placeholder="Select Field" 
+            />
           </div>
           <div>
             <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px'}}>Sub Field</label>
-            <input type="text" name="subField" value={searchParams.subField} onChange={handleChange} placeholder="e.g. Computer Science" className="theme-input" />
+            <Select 
+              name="subField" 
+              value={searchParams.subField} 
+              onChange={(val) => handleSelectChange("subField", val)} 
+              options={subFieldOptions} 
+              styles={customSelectStyles}
+              menuPortalTarget={document.body}
+              placeholder="Select Sub Field" 
+            />
           </div>
           <div>
             <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px'}}>Program Name</label>
-            <input type="text" name="programName" value={searchParams.programName} onChange={handleChange} placeholder="e.g. MSc Data Science" className="theme-input" />
+            <Select 
+              name="programName" 
+              value={searchParams.programName} 
+              onChange={(val) => handleSelectChange("programName", val)} 
+              options={programNameOptions} 
+              styles={customSelectStyles}
+              menuPortalTarget={document.body}
+              placeholder="Select Program" 
+            />
           </div>
           <div>
             <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px'}}>Your Highest Percentage (%)</label>
-            <input type="number" name="percentage" value={searchParams.percentage} onChange={handleChange} placeholder="e.g. 75" className="theme-input" />
+            <input type="number" name="percentage" value={searchParams.percentage} onChange={handleTextChange} placeholder="e.g. 75" className="theme-input" />
           </div>
         </div>
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -418,12 +499,40 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
                       gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                       gap: '12px'
                     }}>
-                      {otherCols.map(col => (
-                        <div key={col} style={{ fontSize: '0.85rem' }}>
-                          <span className="text-muted" style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{col}</span>
-                          <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{uni[col]}</span>
-                        </div>
-                      ))}
+                      {otherCols.map(col => {
+                        const isDeadline = col.toLowerCase().includes('deadline');
+                        return (
+                          <div key={col} style={{ 
+                            fontSize: '0.85rem',
+                            background: isDeadline ? 'rgba(239, 68, 68, 0.05)' : 'var(--input-bg)',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: isDeadline ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid var(--glass-border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}>
+                            <span style={{ 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.75rem', 
+                              textTransform: 'uppercase', 
+                              letterSpacing: '0.5px', 
+                              color: isDeadline ? '#ef4444' : 'var(--text-muted)'
+                            }}>
+                              {isDeadline && <CalendarClock size={12} />}
+                              {col}
+                            </span>
+                            <span style={{ 
+                              color: isDeadline ? '#ef4444' : 'var(--text-main)', 
+                              fontWeight: isDeadline ? 700 : 500 
+                            }}>
+                              {uni[col]}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

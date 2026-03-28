@@ -110,7 +110,8 @@ const UserSchema = new mongoose.Schema({
     programs: [String]
   }, { _id: false })],
   // New Field for Tracking
-  offerStatus: { type: String, enum: ['Pending', 'Received', 'Active', 'Backoff'], default: 'Pending' }
+  offerStatus: { type: String, enum: ['Pending', 'Received'], default: 'Pending' },
+  studentStatus: { type: String, enum: ['Active', 'Backout', 'On Hold'], default: 'Active' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

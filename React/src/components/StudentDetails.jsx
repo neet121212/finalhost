@@ -406,9 +406,15 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={14} /> {formData.phone || 'N/A'}</span>
           </div>
         </div>
-        <div className="student-header-status" style={{ paddingLeft: '20px', borderLeft: '1px solid var(--glass-border)' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Offer Status</div>
-          <div style={{ fontWeight: '600', color: 'var(--accent-secondary)' }}>{student.offerStatus || 'Pending'}</div>
+        <div className="student-header-status" style={{ paddingLeft: '20px', borderLeft: '1px solid var(--glass-border)', display: 'flex', gap: '30px' }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Offer Status</div>
+            <div style={{ fontWeight: '600', color: 'var(--accent-secondary)' }}>{student.offerStatus || 'Pending'}</div>
+          </div>
+          <div style={{ paddingLeft: '20px', borderLeft: '1px solid var(--glass-border)' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>Student Status</div>
+            <div style={{ fontWeight: '600', color: 'var(--accent-secondary)' }}>{student.studentStatus || 'Active'}</div>
+          </div>
         </div>
       </div>
 

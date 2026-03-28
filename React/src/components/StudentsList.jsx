@@ -54,9 +54,13 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
 
   const offerStatusOptions = [
     { value: 'Pending', label: 'Pending' },
-    { value: 'Received', label: 'Received' },
+    { value: 'Received', label: 'Received' }
+  ];
+
+  const studentStatusOptions = [
     { value: 'Active', label: 'Active' },
-    { value: 'Backoff', label: 'Backoff' }
+    { value: 'Backout', label: 'Backout' },
+    { value: 'On Hold', label: 'On Hold' }
   ];
 
   const filterOptions = [
@@ -125,7 +129,23 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
       });
       if (res.ok) {
         fetchStudents();
-        if(setMessage) setMessage({ text: `Offer letter status changed to ${offerStatus}`, type: 'success' });
+        if(setMessage) setMessage({ text: `Offer status changed to ${offerStatus}`, type: 'success' });
+        setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+      }
+    } catch (err) {}
+  };
+
+  const handleUpdateStudentStatus = async (studentId, selectedOption) => {
+    const studentStatus = selectedOption ? selectedOption.value : 'Active';
+    try {
+      const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
+        body: JSON.stringify({ studentStatus })
+      });
+      if (res.ok) {
+        fetchStudents();
+        if(setMessage) setMessage({ text: `Student status changed to ${studentStatus}`, type: 'success' });
         setTimeout(() => setMessage({ text: '', type: '' }), 4000);
       }
     } catch (err) {}
@@ -258,7 +278,8 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
               <th style={{padding: '15px'}}>Student Name</th>
               <th style={{padding: '15px'}}>Location</th>
               <th style={{padding: '15px'}}>Contact</th>
-              <th style={{padding: '15px'}}>Offer Letter Status</th>
+              <th style={{padding: '15px'}}>Offer Status</th>
+              <th style={{padding: '15px'}}>Student Status</th>
               {profile.role !== 'counselor' && <th style={{padding: '15px'}}>Assigned Counselor</th>}
               <th style={{padding: '15px', textAlign: 'center'}}>Actions</th>
             </tr>
@@ -294,8 +315,13 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
                         Saved automatically on selection.
                       </td>
                       <td style={{padding: '15px', fontSize: '0.8rem'}} className="text-muted">
-                        Counselor assignment is handled in view mode.
+                        Status handled in view mode.
                       </td>
+                      {profile.role !== 'counselor' && (
+                        <td style={{padding: '15px', fontSize: '0.8rem'}} className="text-muted">
+                          Counselor assignment handled in view mode.
+                        </td>
+                      )}
                       <td style={{padding: '15px', textAlign: 'center'}}>
                         <div style={{display: 'flex', gap: '10px', justifyContent: 'center'}}>
                           <button onClick={() => handleSaveEdit(s._id)} style={{background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '5px'}} title="Save">
@@ -340,7 +366,17 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
                         options={offerStatusOptions}
                         value={offerStatusOptions.find(o => o.value === (s.offerStatus || 'Pending'))}
                         onChange={(val) => handleUpdateOfferStatus(s._id, val)}
-                        styles={{...customSelectStyles, control: (b,st) => ({...customSelectStyles.control(b,st), minWidth: '130px', fontSize: '0.85rem'})}}
+                        styles={{...customSelectStyles, control: (b,st) => ({...customSelectStyles.control(b,st), minWidth: '120px', fontSize: '0.82rem'})}}
+                        isSearchable={false}
+                      />
+                    </td>
+                    <td style={{padding: '15px'}} onClick={(e) => e.stopPropagation()}>
+                      <Select 
+                        menuPortalTarget={document.body}
+                        options={studentStatusOptions}
+                        value={studentStatusOptions.find(o => o.value === (s.studentStatus || 'Active'))}
+                        onChange={(val) => handleUpdateStudentStatus(s._id, val)}
+                        styles={{...customSelectStyles, control: (b,st) => ({...customSelectStyles.control(b,st), minWidth: '120px', fontSize: '0.82rem'})}}
                         isSearchable={false}
                       />
                     </td>

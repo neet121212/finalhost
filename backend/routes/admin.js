@@ -46,11 +46,15 @@ router.post('/users', async (req, res) => {
 // UPDATE user details
 router.put('/users/:id', async (req, res) => {
   try {
-    const updates = req.body;
-    // Security: Prevent accidentally changing password via this generic route
-    if (updates.password) {
+    const updates = { ...req.body };
+    // If a password is provided, hash it before updating
+    if (updates.password && updates.password.trim() !== "") {
+       const bcrypt = require('bcrypt');
+       updates.password = await bcrypt.hash(updates.password, 10);
+    } else {
        delete updates.password;
     }
+
     const user = await User.findByIdAndUpdate(req.params.id, updates, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ message: 'User updated successfully', user });

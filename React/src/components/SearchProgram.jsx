@@ -69,6 +69,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   const [error, setError] = useState(null);
   const [selectedUniIds, setSelectedUniIds] = useState(() => preselectedUnis.map(u => u.id));
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     setSelectedUniIds(prev => {
@@ -238,6 +239,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   };
 
   const handleSelectChange = (name, selectedOption) => {
+    setHasSearched(false);
     setSearchParams(prev => {
       const updated = { ...prev, [name]: selectedOption };
 
@@ -258,6 +260,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   };
 
   const handleTextChange = (e) => {
+    setHasSearched(false);
     setSearchParams(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -380,7 +383,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     } else {
       // Select all visible (up to 25)
       const toAdd = visibleResults.filter(uni => !selectedUniIds.includes(uni.id || uni.SNO));
-      
+
       let currentCount = selectedUniIds.length;
       const actualToAdd = [];
       const newIds = [...selectedUniIds];
@@ -444,7 +447,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     setError("Excel download is temporarily disabled.");
     setTimeout(() => setError(null), 4000);
     return;
-    
+
     const selected = universitiesData.filter(u => selectedUniIds.includes(u.id));
     if (selected.length === 0) return;
 
@@ -570,7 +573,22 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
           </div>
         </div>
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-save" onClick={(e) => e.preventDefault()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 25px', width: 'auto' }}>
+          <button className="btn-save" onClick={(e) => {
+            e.preventDefault();
+            const hasFilter =
+              (searchParams.programLevel && searchParams.programLevel.value) ||
+              (searchParams.interestedField && searchParams.interestedField.value) ||
+              (searchParams.subField && searchParams.subField.value) ||
+              (searchParams.programName && searchParams.programName.value) ||
+              (searchParams.percentage && searchParams.percentage.trim() !== '');
+
+            if (hasFilter) {
+              setHasSearched(true);
+            } else {
+              setError("Please select at least one filter before searching.");
+              setTimeout(() => setError(null), 4000);
+            }
+          }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 25px', width: 'auto' }}>
             <Search size={16} />
             Search Programs
           </button>
@@ -581,9 +599,9 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
         <h3 style={{ padding: '20px 20px 0 20px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <span>Search Results</span>
-            {!isLoading && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{filteredResults.length} programs found</span>}
+            {!isLoading && hasSearched && <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>{filteredResults.length} programs found</span>}
           </div>
-          {!isLoading && filteredResults.length > 0 && !hideFooter && (
+          {!isLoading && hasSearched && filteredResults.length > 0 && !hideFooter && (
             <button
               onClick={handleSelectAllFiltered}
               style={{
@@ -609,12 +627,32 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
         </h3>
 
         {isLoading ? (
-          <div className="empty-state" style={{ padding: '50px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-            <Loader2 size={32} className="animate-spin text-accent" style={{ color: 'var(--accent-secondary)' }} />
-            <span className="text-muted">Loading.......</span>
+          <div className="empty-state" style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '25px', background: 'var(--card-bg-solid)', borderRadius: '16px', border: '1px solid var(--glass-border)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
+            <div style={{ position: 'relative', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: 'var(--accent-primary)', borderRightColor: 'var(--accent-secondary)', animation: 'spin 1.5s linear infinite' }}></div>
+              <div style={{ position: 'absolute', inset: '10px', borderRadius: '50%', border: '3px solid transparent', borderBottomColor: 'var(--accent-secondary)', borderLeftColor: 'var(--accent-primary)', animation: 'spin 2s linear infinite reverse', opacity: 0.7 }}></div>
+              <Database size={32} style={{ color: 'var(--text-main)', animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem', letterSpacing: '1px' }}>Synchronizing Database</h3>
+              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>...</p>
+            </div>
+            <style>{`
+              @keyframes spin { 100% { transform: rotate(360deg); } }
+              @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.9); } }
+            `}</style>
+          </div>
+        ) : !hasSearched ? (
+          <div className="empty-state" style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', color: 'var(--text-muted)' }}>
+            <Search size={48} style={{ opacity: 0.2, marginBottom: '10px' }} />
+            <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Ready to Search</h3>
+            <p style={{ margin: 0 }}>Configure your parameters above and click "Search Programs" to begin.</p>
           </div>
         ) : filteredResults.length === 0 ? (
-          <div className="empty-state" style={{ padding: '30px', color: '#ef4444' }}>No universities matched your specific criteria. Try lowering the percentage or changing filters.</div>
+          <div className="empty-state" style={{ padding: '50px 20px', color: '#ef4444', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px dashed rgba(239, 68, 68, 0.3)' }}>
+            <h3 style={{ margin: '0 0 10px 0' }}>No Match Found</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem' }}>No universities matched your specific criteria. Try lowering the percentage or changing filters.</p>
+          </div>
         ) : (
           <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {filteredResults.map((uni, idx) => {

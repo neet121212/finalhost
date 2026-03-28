@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Mail, Phone, MapPin, Building, Shield } from 'lucide-react';
+import { Search, Plus, Trash2, Mail, Phone, MapPin, Building, Shield, Eye, EyeOff, Edit2 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import Select from 'react-select';
 import { Country } from 'country-state-city';
 
 const ALLOWED_COUNTRIES = []; // Deprecated, enabling global support
 
-const ManageCounselors = ({ setMessage }) => {
+const ManageCounselors = ({ setMessage, targetPartnerId }) => {
   const [counselors, setCounselors] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '+91 ', speciality: '', country: null, password: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '+91 ', country: null, password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     fetchCounselors();
@@ -25,7 +27,8 @@ const ManageCounselors = ({ setMessage }) => {
 
   const fetchCounselors = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/erp/counselors`, {
+      const url = targetPartnerId ? `${API_BASE_URL}/erp/counselors?partnerId=${targetPartnerId}` : `${API_BASE_URL}/erp/counselors`;
+      const response = await fetch(url, {
         headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
       });
       if (response.ok) {
@@ -89,29 +92,47 @@ const ManageCounselors = ({ setMessage }) => {
     input: (base) => ({ ...base, color: 'var(--text-main)' }),
   };
 
-  const handleAdd = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_BASE_URL}/erp/counselors`, {
-        method: 'POST',
+      const url = editingId ? `${API_BASE_URL}/erp/counselors/${editingId}` : `${API_BASE_URL}/erp/counselors`;
+      const method = editingId ? 'PUT' : 'POST';
+      
+      const payload = targetPartnerId ? { ...formData, targetPartnerId } : formData;
+      if (editingId && !formData.password) delete payload.password; // Don't send empty password if editing
+
+      const response = await fetch(url, {
+        method,
         headers: { 
           'Content-Type': 'application/json',
           'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token')
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       if (response.ok) {
-        setMessage({ text: 'Counselor added successfully.', type: 'success' });
-        setFormData({ name: '', email: '', phone: '+91 ', speciality: '', country: null, password: '' });
+        setMessage({ text: editingId ? 'Counselor updated successfully.' : 'Counselor added successfully.', type: 'success' });
+        setFormData({ name: '', email: '', phone: '+91 ', country: null, password: '' });
+        setEditingId(null);
         fetchCounselors();
       } else {
         const data = await response.json();
-        setMessage({ text: data.error || 'Failed to add counselor.', type: 'error' });
+        setMessage({ text: data.error || 'Failed to process request.', type: 'error' });
       }
     } catch (err) {
       setMessage({ text: 'Server error.', type: 'error' });
     }
     setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+  };
+
+  const handleEdit = (c) => {
+    setEditingId(c._id);
+    setFormData({
+      name: `${c.firstName} ${c.lastName || ''}`.trim(),
+      email: c.email,
+      phone: c.phone || '+91 ',
+      country: countries.find(co => c.phone && c.phone.startsWith(`+${co.phonecode}`)) || null,
+      password: ''
+    });
   };
 
   const handleDelete = async (id) => {
@@ -133,15 +154,23 @@ const ManageCounselors = ({ setMessage }) => {
 
   return (
     <div className="view-counselors">
-      <header className="dash-header">
-        <div>
-          <h1>Manage Counselors</h1>
-          <p>Add or remove admission counselors from the network.</p>
-        </div>
-      </header>
+      {!targetPartnerId && (
+        <header className="dash-header">
+          <div>
+            <h1>Manage Counselors</h1>
+            <p>Add or remove admission counselors from the network.</p>
+          </div>
+        </header>
+      )}
 
-      <div className="widget" style={{ marginBottom: '20px', padding: '25px' }}>
-        <form onSubmit={handleAdd} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'end' }}>
+      <div className="widget" style={{ marginBottom: '20px', padding: '25px', border: editingId ? '2px solid var(--accent-secondary)' : '1px solid var(--glass-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+             <h4 style={{ margin: 0, color: 'var(--text-main)' }}>{editingId ? "Edit Counselor" : "Add New Counselor"}</h4>
+             {editingId && (
+               <button onClick={() => { setEditingId(null); setFormData({ name: '', email: '', phone: '+91 ', country: null, password: '' }); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Cancel Edit</button>
+             )}
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', alignItems: 'end' }}>
           <div>
             <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Full Name</label>
             <input type="text" name="name" value={formData.name} onChange={handleChange} required className="theme-input" placeholder="Enter name" />
@@ -151,8 +180,17 @@ const ManageCounselors = ({ setMessage }) => {
             <input type="email" name="email" value={formData.email} onChange={handleChange} required className="theme-input" placeholder="counselor@example.com" />
           </div>
           <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Password</label>
-            <input type="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Set access password" className="theme-input" />
+            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Password {editingId && '(Leave blank to keep current)'}</label>
+            <div style={{ position: 'relative' }}>
+              <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} required={!editingId} placeholder={editingId ? "Enter new password if changing" : "Set access password"} className="theme-input" style={{ width: '100%', paddingRight: '40px' }} />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '10px' }}>
@@ -171,14 +209,9 @@ const ManageCounselors = ({ setMessage }) => {
             </div>
           </div>
 
-          <div>
-            <label className="text-muted" style={{display: 'block', fontSize: '0.8rem', marginBottom: '8px', fontWeight: 600}}>Speciality</label>
-            <input type="text" name="speciality" value={formData.speciality} onChange={handleChange} placeholder="e.g. UK Visas, Admissions" className="theme-input" />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn-primary" style={{ padding: '0 30px', height: '42px', borderRadius: '10px', fontWeight: 600, width: '100%' }}>
-              Add New Counselor
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gridColumn: '2 / span 2' }}>
+            <button type="submit" className="btn-primary" style={{ padding: '0 30px', height: '42px', borderRadius: '10px', fontWeight: 600, width: '100%', background: editingId ? '#f59e0b' : '' }}>
+              {editingId ? "Update Counselor Information" : "Add New Counselor"}
             </button>
           </div>
         </form>
@@ -191,7 +224,6 @@ const ManageCounselors = ({ setMessage }) => {
               <th style={{padding: '10px'}}>Name</th>
               <th style={{padding: '10px'}}>Email</th>
               <th style={{padding: '10px'}}>Phone</th>
-              <th style={{padding: '10px'}}>Speciality</th>
               <th style={{padding: '10px', width: '50px'}}></th>
             </tr>
           </thead>
@@ -201,29 +233,20 @@ const ManageCounselors = ({ setMessage }) => {
                 <td style={{padding: '10px'}}>{c.firstName} {c.lastName || ''}</td>
                 <td style={{padding: '10px'}} className="text-muted">{c.email}</td>
                 <td style={{padding: '10px'}} className="text-muted">{c.phone}</td>
-                <td style={{padding: '10px'}}>
-                  <span style={{ 
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))', 
-                    color: '#a855f7', 
-                    padding: '4px 12px', 
-                    borderRadius: '20px', 
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    border: '1px solid rgba(168, 85, 247, 0.2)',
-                    display: 'inline-block'
-                  }}>
-                    {c.speciality || 'General'}
-                  </span>
-                </td>
                 <td style={{padding: '10px', textAlign: 'center'}}>
-                  <button onClick={() => handleDelete(c._id)} style={{background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: '0.7'}}>
-                    <Trash2 size={16} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button onClick={() => handleEdit(c)} style={{background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', opacity: '0.7'}}>
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(c._id)} style={{background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: '0.7'}}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {counselors.length === 0 && (
-              <tr><td colSpan="5" style={{padding: '20px', textAlign: 'center', color: '#9ca3af'}}>No active counselors found.</td></tr>
+              <tr><td colSpan="4" style={{padding: '20px', textAlign: 'center', color: '#9ca3af'}}>No active counselors found.</td></tr>
             )}
           </tbody>
         </table>

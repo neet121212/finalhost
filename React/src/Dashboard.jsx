@@ -21,6 +21,33 @@ import AppliedUniversities from './components/AppliedUniversities';
 import PartnerApplications from './components/PartnerApplications';
 import { API_BASE_URL } from './config';
 
+const DesignerTag = ({ isSidebarOpen }) => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  if (!isSidebarOpen) return null;
+
+  return (
+    <div 
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPos({ x: (e.clientX - rect.left - rect.width/2)/5, y: (e.clientY - rect.top - rect.height/2)/5 });
+      }}
+      onMouseLeave={() => setPos({ x: 0, y: 0 })}
+      style={{ 
+        marginTop: 'auto', padding: '20px 0 10px 0', textAlign: 'center', fontSize: '0.6rem', 
+        color: 'var(--text-muted)', letterSpacing: '2px', opacity: 0.4, cursor: 'none',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <div style={{ 
+        transform: `translate(${pos.x}px, ${pos.y}px)`, transition: 'transform 0.1s ease-out',
+        fontWeight: 'bold', textTransform: 'uppercase'
+      }}>
+        designer @NEET
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('home'); // which sidebar section is open
@@ -248,6 +275,7 @@ const Dashboard = () => {
               <span className="role">{isPartner ? profile.companyName || 'Partner' : isCounselor ? 'Counselor' : 'Student'}</span>
             </div>
           </div>
+          <DesignerTag isSidebarOpen={isSidebarOpen} />
         </aside>
 
         {/* ================================== */}
@@ -563,10 +591,7 @@ const Dashboard = () => {
                             <label>Designation</label>
                             <input type="text" name="designation" value={formData.designation || ''} onChange={handleChange} required className="dash-input" />
                           </div>
-                          <div className="dash-input-group">
-                            <label>Student Unique ID</label>
-                            <input type="text" name="studentUniqueId" value={formData.studentUniqueId || ''} onChange={handleChange} className="dash-input" />
-                          </div>
+
                           <div className="input-group col-span-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '10px', gridColumn: '1 / -1' }}>
                             <input
                               type="checkbox"

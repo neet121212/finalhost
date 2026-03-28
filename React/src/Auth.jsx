@@ -66,15 +66,10 @@ const Auth = () => {
     indicatorSeparator: (provided) => ({ ...provided, background: 'var(--glass-border)' })
   };
 
-  const startShowPassword = () => setShowPassword(true);
-  const stopShowPassword = () => setShowPassword(false);
+  const togglePasswordVisibility = () => setShowPassword(prev => !prev);
 
   const passwordToggleProps = {
-    onMouseDown: startShowPassword,
-    onMouseUp: stopShowPassword,
-    onMouseLeave: stopShowPassword,
-    onTouchStart: startShowPassword,
-    onTouchEnd: stopShowPassword,
+    onClick: togglePasswordVisibility,
     style: { cursor: 'pointer', color: 'var(--text-muted)' }
   };
 
@@ -449,7 +444,6 @@ const Auth = () => {
                   <div className="input-group"><label>Company Name*</label><div className="input-container"><Building2 className="input-icon"/><input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="auth-input" placeholder="Company Name" required /></div></div>
                   <div className="input-group"><label>Company Address*</label><div className="input-container"><MapPin className="input-icon"/><input type="text" name="companyAddress" value={formData.companyAddress} onChange={handleChange} className="auth-input" placeholder="Company Address" required /></div></div>
                   <div className="input-group"><label>Designation*</label><div className="input-container"><Briefcase className="input-icon"/><input type="text" name="designation" value={formData.designation} onChange={handleChange} className="auth-input" placeholder="Designation (e.g. CEO, Manager)" required /></div></div>
-                  <div className="input-group"><label>Student Unique ID</label><div className="input-container"><KeyRound className="input-icon"/><input type="text" name="studentUniqueId" value={formData.studentUniqueId} onChange={handleChange} className="auth-input" placeholder="Optional Agency Tracker ID" /></div></div>
                   <div className="input-group"><label>Email*</label><div className="input-container"><Mail className="input-icon"/><input type="email" name="email" value={formData.email} onChange={handleChange} className="auth-input" placeholder="partner@example.com" required /></div></div>
                   <div className="input-group"><label>First Name*</label><div className="input-container"><User className="input-icon"/><input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="auth-input" placeholder="First Name" required /></div></div>
                   <div className="input-group"><label>Last Name</label><div className="input-container"><User className="input-icon"/><input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="auth-input" placeholder="Last Name" /></div></div>

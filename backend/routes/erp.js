@@ -19,22 +19,26 @@ router.get('/stats', auth, async (req, res) => {
 
     const totalStudents = await User.countDocuments(studentQuery);
     const studentsReceived = await User.countDocuments({ ...studentQuery, offerStatus: 'Received' });
-    const studentsActive = await User.countDocuments({ ...studentQuery, offerStatus: 'Active' });
-    const studentsBackoff = await User.countDocuments({ ...studentQuery, offerStatus: 'Backoff' });
+    const studentsPending = await User.countDocuments({ ...studentQuery, offerStatus: 'Pending' });
+    const studentsActive = await User.countDocuments({ ...studentQuery, studentStatus: 'Active' });
+    const studentsBackout = await User.countDocuments({ ...studentQuery, studentStatus: 'Backout' });
+    const studentsHold = await User.countDocuments({ ...studentQuery, studentStatus: 'On Hold' });
 
-    let counselorQuery = {};
+    let counselorQuery = { role: 'counselor' };
     if (currentUser && currentUser.role === 'partner') {
-      counselorQuery.registeredBy = currentUser._id;
+      counselorQuery.parentPartner = currentUser._id;
     }
-    const totalCounselors = await Counselor.countDocuments(counselorQuery);
+    const totalCounselors = await User.countDocuments(counselorQuery);
     const totalApplications = await Application.countDocuments();
     const pendingApps = await Application.countDocuments({ status: 'Under Review' });
 
     res.json({
       totalStudents,
       studentsReceived,
+      studentsPending,
       studentsActive,
-      studentsBackoff,
+      studentsBackout,
+      studentsHold,
       totalCounselors,
       totalApplications,
       pendingApps
@@ -56,6 +60,8 @@ router.get('/counselors', auth, async (req, res) => {
     // If Partner, only see their own counselors
     if (currentUser && currentUser.role === 'partner') {
       query.parentPartner = currentUser._id;
+    } else if (currentUser && currentUser.role === 'admin' && req.query.partnerId) {
+      query.parentPartner = req.query.partnerId;
     }
     
     // Optionally return counselors array for admins too
@@ -69,7 +75,9 @@ router.get('/counselors', auth, async (req, res) => {
 // Add new counselor
 router.post('/counselors', auth, async (req, res) => {
   try {
-    const { name, email, phone, speciality, password } = req.body;
+    const { name, email, phone, speciality, password, targetPartnerId } = req.body;
+    
+    const currentUser = await User.findById(req.user.id);
     
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: "Email already exists in system" });
@@ -85,6 +93,11 @@ router.post('/counselors', auth, async (req, res) => {
     const firstName = parts[0];
     const lastName = parts.slice(1).join(' ') || '';
 
+    let assignedPartnerId = req.user.id;
+    if (currentUser && currentUser.role === 'admin' && targetPartnerId) {
+       assignedPartnerId = targetPartnerId;
+    }
+
     const counselor = new User({ 
       firstName, 
       lastName, 
@@ -93,8 +106,8 @@ router.post('/counselors', auth, async (req, res) => {
       speciality, 
       password: hashedPassword,
       role: 'counselor',
-      parentPartner: req.user.id,
-      registeredBy: req.user.id
+      parentPartner: assignedPartnerId,
+      registeredBy: assignedPartnerId
     });
     
     await counselor.save();
@@ -126,6 +139,41 @@ router.delete('/counselors/:id', auth, async (req, res) => {
     res.json({ message: "Counselor removed" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete counselor" });
+  }
+});
+
+// Update counselor
+router.put('/counselors/:id', auth, async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+    let updateData = {};
+    
+    if (name) {
+      const parts = name.split(' ');
+      updateData.firstName = parts[0];
+      updateData.lastName = parts.slice(1).join(' ') || '';
+    }
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
+    if (password) {
+      const bcrypt = require('bcrypt');
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const counselor = await User.findOne({ _id: req.params.id, role: 'counselor' });
+    if (!counselor) return res.status(404).json({ error: "Counselor not found" });
+
+    const currentUser = await User.findById(req.user.id);
+    if (currentUser && currentUser.role === 'partner') {
+      if (counselor.parentPartner && counselor.parentPartner.toString() !== currentUser._id.toString()) {
+        return res.status(403).json({ error: "Unauthorized access" });
+      }
+    }
+
+    const updated = await User.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update counselor" });
   }
 });
 
@@ -196,6 +244,7 @@ router.post('/students', auth, async (req, res) => {
     const studentData = {
       firstName, lastName, email, phone, country, state, city,
       offerStatus: offerStatus || 'Pending',
+      studentStatus: 'Active',
       password: hashedPassword,
       role: 'student',
     };
@@ -241,7 +290,7 @@ router.put('/students/:id', auth, async (req, res) => {
 
     const allowedFields = [
       'firstName', 'middleName', 'lastName', 'email', 'phone', 'dob', 'gender',
-      'country', 'state', 'city', 'offerStatus',
+      'country', 'state', 'city', 'offerStatus', 'studentStatus',
       'mailingAddress1', 'mailingAddress2', 'mailingCountry', 'mailingState', 'mailingCity', 'mailingPincode',
       'isPermanentSameAsMailing', 'permanentAddress1', 'permanentAddress2', 'permanentCountry', 'permanentState', 'permanentCity', 'permanentPincode',
       'passportNo', 'issueDate', 'expiryDate', 'issueCountry', 'issueState', 'issueCity',

@@ -24,24 +24,48 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
           <div style={{ position: 'absolute', top: '25px', right: '25px', color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>↑ 4%</div>
         </div>
 
+        {isPartner && (
+            <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <h3>Total Counselors</h3>
+              <div className="metric" style={{ justifyContent: 'center' }}>{stats.totalCounselors || 0}</div>
+              <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Active sub-accounts</p>
+            </div>
+        )}
+
         {isPartner ? (
-          <div className="widget metric-card" style={{ position: 'relative', padding: '20px' }}>
-            <h3>Offer Letters</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{stats.studentsReceived || 0}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Received</div>
-              </div>
-              <div style={{ textAlign: 'center', borderLeft: '1px solid var(--glass-border)', borderRight: '1px solid var(--glass-border)', padding: '0 10px', flex: 1 }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3b82f6' }}>{stats.studentsActive || 0}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Active</div>
-              </div>
-              <div style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{stats.studentsBackoff || 0}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Backoff</div>
+          <>
+            <div className="widget metric-card" style={{ position: 'relative', padding: '20px' }}>
+              <h3>Offer Status</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>{stats.studentsReceived || 0}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Received</div>
+                </div>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid var(--glass-border)', padding: '0 10px', flex: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{stats.studentsPending || 0}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Pending</div>
+                </div>
               </div>
             </div>
-          </div>
+
+            <div className="widget metric-card" style={{ position: 'relative', padding: '20px' }}>
+              <h3>Student Status</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '15px' }}>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3b82f6' }}>{stats.studentsActive || 0}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Active</div>
+                </div>
+                <div style={{ textAlign: 'center', borderLeft: '1px solid var(--glass-border)', borderRight: '1px solid var(--glass-border)', padding: '0 10px', flex: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ef4444' }}>{stats.studentsBackout || 0}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Backout</div>
+                </div>
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#a855f7' }}>{stats.studentsHold || 0}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>On Hold</div>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
             <h3>Active Applications</h3>

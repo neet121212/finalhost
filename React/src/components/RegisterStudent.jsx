@@ -24,7 +24,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
 
   const assignOptions = [
     { value: '', label: 'Unassigned' },
-    ...counselors.map(c => ({ value: c._id, label: `${c.name} (${c.specialty})` }))
+    ...counselors.map(c => ({ value: c._id, label: `${c.firstName} ${c.lastName || ''} (${c.speciality || 'General'})` }))
   ];
   const [formData, setFormData] = useState({
     firstName: '',

@@ -163,9 +163,9 @@ const PartnerApplications = ({ profile, setMessage }) => {
                         <Building size={20} className="text-muted" /> {app.name}
                       </h4>
                       <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {app.location && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {app.location}</span>}
-                        {app.minPercentage && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {app.minPercentage}%</span>}
-                        {app.level && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px' }}>{app.level}</span>}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {app.location && app.location !== 'null' && app.location !== 'Unknown' ? app.location : 'Region Not Specified'}</span>
+                        {app.minPercentage && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {app.minPercentage < 1 ? Math.round(app.minPercentage * 100) : app.minPercentage}%</span>}
+                        {app.level && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px' }}>{app.level === 'null' || !app.level ? 'Degree' : app.level}</span>}
                       </div>
 
                       <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>

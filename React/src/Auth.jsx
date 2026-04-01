@@ -21,6 +21,8 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPartnerPopup, setShowPartnerPopup] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const [fadeOutSplash, setFadeOutSplash] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
@@ -74,11 +76,12 @@ const Auth = () => {
   };
 
   useEffect(() => {
-    // Auto-redirect if token exists in either storage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    if (token) {
-      navigate('/dashboard');
-    }
+    // Auto-redirect if cookie is valid
+    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+      .then(res => {
+        if (res.ok) navigate('/dashboard');
+      })
+      .catch(() => {});
   }, [navigate]);
 
   useEffect(() => {
@@ -223,6 +226,7 @@ const Auth = () => {
     try {
       const endpoint = forcedRole === 'partner' ? `${API_BASE_URL}/auth/partner-request` : `${API_BASE_URL}/auth/signup`;
       const response = await fetch(endpoint, {
+      credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -252,6 +256,7 @@ const Auth = () => {
     setMessage({ text: 'Logging in...', type: 'info' });
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: formData.email, password: formData.password }),
@@ -259,15 +264,12 @@ const Auth = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Clear any old tokens first
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
+        // Token is now managed securely via HTTPOnly cookies from the backend
+        sessionStorage.setItem('tab_session', 'true'); // Required for Strict Tab Close Session Killer
         
         if (keepSignedIn) {
-          localStorage.setItem('token', data.token);
           localStorage.setItem('keepSignedIn', 'true');
         } else {
-          sessionStorage.setItem('token', data.token);
           localStorage.removeItem('keepSignedIn');
         }
         
@@ -354,12 +356,34 @@ const Auth = () => {
 
   return (
     <div className="auth-universe" onMouseMove={handleMouseMove}>
+      
       <div className="mouse-glow"></div>
-      {/* GLOBAL THEME TOGGLE */}
-      <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', background: 'var(--glass-bg)', padding: '5px', borderRadius: '10px', zIndex: 100, border: '1px solid var(--glass-border)' }}>
-        <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Light Mode"><Sun size={14} /></button>
-        <button onClick={() => setTheme('dark')} style={{ background: theme === 'dark' ? 'var(--accent-primary)' : 'transparent', color: theme === 'dark' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dark Mode"><Moon size={14} /></button>
-        <button onClick={() => setTheme('system')} style={{ background: theme === 'system' ? 'var(--accent-primary)' : 'transparent', color: theme === 'system' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="System Auto"><Monitor size={14} /></button>
+      {/* TOP HEADER CONTROLS */}
+      <div style={{ position: 'absolute', top: '24px', right: '24px', display: 'flex', alignItems: 'center', gap: '15px', zIndex: 100 }}>
+        {/* Registration Quick-Access (Visible in Login/Forgot mode) */}
+        {(mode === 'login' || mode === 'forgot') && (
+           <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => { setMode('signup'); setRole('student'); setMessage({text:'', type:''}); }}
+                style={{ background: 'var(--accent-primary)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
+              >
+                <User size={14} /> Register Student
+              </button>
+              <button 
+                onClick={() => { setMode('signup'); setRole('partner'); setMessage({text:'', type:''}); }}
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)' }}
+              >
+                <Briefcase size={14} /> Register Partner
+              </button>
+           </div>
+        )}
+
+        {/* Theme Toggle Group */}
+        <div style={{ display: 'flex', background: 'var(--glass-bg)', padding: '5px', borderRadius: '10px', border: '1px solid var(--glass-border)', backdropFilter: 'blur(10px)' }}>
+          <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="Light Mode"><Sun size={14} /></button>
+          <button onClick={() => setTheme('dark')} style={{ background: theme === 'dark' ? 'var(--accent-primary)' : 'transparent', color: theme === 'dark' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="Dark Mode"><Moon size={14} /></button>
+          <button onClick={() => setTheme('system')} style={{ background: theme === 'system' ? 'var(--accent-primary)' : 'transparent', color: theme === 'system' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="System Auto"><Monitor size={14} /></button>
+        </div>
       </div>
       <div className="particles-layer"></div>
       

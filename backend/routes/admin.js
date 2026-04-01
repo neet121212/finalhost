@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const admin = require('../middleware/admin');
+const checkRole = require('../middleware/rbac');
 
 // All routes in this file require both auth and admin middleware to protect the data
-router.use(auth, admin);
+router.use(auth, checkRole(['admin']));
 
 // GET all users (students, partners, and other admins)
 router.get('/users', async (req, res) => {

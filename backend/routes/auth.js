@@ -20,6 +20,14 @@ router.post('/signup', async (req, res) => {
       if (existingUser.email === email) return res.status(400).json({ error: "Email already registered" });
     }
     
+    // Enforce Strict Password Complexity (8 chars, 1 upper, 1 lower, 1 number, 1 special)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character." 
+      });
+    }
+
     // Scramble the password
     const hashedPassword = await bcrypt.hash(password, 10);
     
@@ -51,13 +59,48 @@ router.post('/login', async (req, res) => {
     
     if (!user) return res.status(400).json({ error: "User not found" });
 
+    // Enforce Account Intrusion Soft-Locks
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      const remainingMinutes = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      return res.status(403).json({ 
+        error: `Account temporarily locked due to multiple failed attempts. Please try again in ${remainingMinutes} minutes.` 
+      });
+    }
+
     // Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
+    if (!isMatch) {
+      user.loginAttempts += 1;
+      
+      // If they fail 5 times, lock the account for 15 minutes
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes from now
+        await user.save();
+        return res.status(403).json({ error: "Maximum attempts reached. Account locked for 15 minutes." });
+      }
+      
+      await user.save();
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    // If login is successful, reset lockout parameters
+    if (user.loginAttempts > 0 || user.lockUntil) {
+      user.loginAttempts = 0;
+      user.lockUntil = undefined;
+      await user.save();
+    }
 
     // Give user a token
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, message: "Logged in successfully", user: { email: user.email, phone: user.phone, role: user.role } });
+    
+    // Set token as HTTPOnly Session Cookie (no maxAge = clears when browser closes)
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict'
+    });
+    
+    res.json({ message: "Logged in successfully", user: { email: user.email, phone: user.phone, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
@@ -167,4 +210,14 @@ router.post('/partner-request', async (req, res) => {
   }
 });
 
-module.exports = router;
+// 6. LOGOUT ROUTE
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict'
+  });
+  res.json({ message: "Logged out successfully" });
+});
+
+module.exports = router;

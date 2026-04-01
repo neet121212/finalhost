@@ -13,7 +13,9 @@ import SearchProgram from './SearchProgram';
 nationality.registerLocale(enNationality);
 
 const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingApplications, isPartnerView, refreshProfile }) => {
-  const [activeTab, setActiveTab] = useState('applications');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [applicationSubTab, setApplicationSubTab] = useState('apply');
+  const [selectedAppliedProgram, setSelectedAppliedProgram] = useState(null);
   const [formData, setFormData] = useState({});
   const [message, setMessage] = useState('');
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -23,10 +25,11 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttachmentsWarning, setHasAttachmentsWarning] = useState(false);
   const [showNoDocsError, setShowNoDocsError] = useState(false);
+  const [expandedUniIds, setExpandedUniIds] = useState([]);
   const [selectedForApplication, setSelectedForApplication] = useState(() => {
     let initial = [];
-    if (student.appliedUniversities && student.appliedUniversities.length > 0) {
-      initial = student.appliedUniversities.filter(u => u && typeof u === 'object' && u.id);
+    if (student.savedUniversitiesCart && student.savedUniversitiesCart.length > 0) {
+      initial = student.savedUniversitiesCart.filter(u => u && typeof u === 'object' && u.id);
     }
     if (pendingApplications && pendingApplications.length > 0) {
       const existingIds = new Set(initial.map(i => i.id));
@@ -348,12 +351,12 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
 
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${student._id}`, {
+        credentials: 'include',
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token')
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, savedUniversitiesCart: selectedForApplication })
       });
 
       if (res.ok) {
@@ -421,10 +424,10 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
       {/* Navigation Tabs */}
       <div className="tabs-wrapper" style={{ display: 'flex', gap: '2px', background: 'var(--table-header-bg)', padding: '5px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--glass-border)', overflowX: 'auto', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch' }}>
         {[
-          { id: 'applications', label: 'Select University' },
           { id: 'profile', label: 'Profile' },
           { id: 'academic', label: 'Academic Qualification' },
-          { id: 'documents', label: 'Documents' }
+          { id: 'documents', label: 'Documents' },
+          { id: 'applications', label: 'Select University' }
         ].map((tabObj, idx) => (
           <button
             key={tabObj.id}
@@ -453,7 +456,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
 
       {/* Tabs Content */}
       <div className="tab-content" style={{ paddingBottom: '40px' }}>
-        {activeTab === 'profile' && (
+        <div style={{ display: activeTab === 'profile' ? 'block' : 'none' }}>
           <form onSubmit={handleSaveProfile} className="edit-form-grid">
 
             {/* Personal Information */}
@@ -775,7 +778,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
 
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-              <button type="button" onClick={() => setActiveTab('applications')} className="btn-save" style={{ padding: '12px 20px', background: 'var(--bg-secondary)', color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}>Previous</button>
+              <button type="button" disabled style={{ opacity: 0, pointerEvents: 'none', padding: '12px 20px' }}>Previous</button>
               <button type="submit" className="btn-save" style={{ padding: '12px 30px', fontSize: '1.05rem' }}>
                 <Save size={18} /> Save Complete Profile
               </button>
@@ -784,8 +787,8 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
               </button>
             </div>
           </form>
-        )}
-        {activeTab === 'academic' && (
+        </div>
+        <div style={{ display: activeTab === 'academic' ? 'block' : 'none' }}>
           <form onSubmit={handleSaveProfile} className="edit-form-grid">
             {/* Top of Academic Qualification */}
             <div className="widget" style={{ padding: '25px', marginBottom: '20px', position: 'relative' }}>
@@ -822,7 +825,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
               </div>
             </div>
 
-            {formData.educationHistory.map((edu, index) => {
+            {(formData.educationHistory || []).map((edu, index) => {
               const hl = formData.highestLevelOfEducation;
               if (hl === 'Bachelors' && edu.level === 'Masters') return null;
               if (hl === '12th or equivalent' && (edu.level === 'Masters' || edu.level === 'Bachelors')) return null;
@@ -966,7 +969,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
               <h3 style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px', marginBottom: '20px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FolderOpen size={18} className="text-muted" /> Work Experience
               </h3>
-              {formData.workExperience.map((work, index) => (
+              {(formData.workExperience || []).map((work, index) => (
                 <div key={index} style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: index < formData.workExperience.length - 1 ? '1px dashed var(--glass-border)' : 'none', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '10px', right: '0px', zIndex: 10 }}>
                     <button type="button" onClick={() => clearWorkEntry(index)}
@@ -1044,123 +1047,230 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
               </button>
             </div>
           </form>
-        )}
-        {activeTab === 'applications' && (
+        </div>
+        <div style={{ display: activeTab === 'applications' ? 'block' : 'none' }}>
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            
-            {selectedForApplication.length > 0 && (
-              <div className="widget" style={{ marginBottom: '20px', background: 'var(--card-bg-solid)', border: '1px solid var(--accent-secondary)' }}>
-                <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckSquare size={18} className="text-muted"/> Selected Universities for Application
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
-                  {selectedForApplication.map((uni, idx) => (
-                    <div key={idx} style={{ padding: '15px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--glass-border)', position: 'relative' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '5px' }}>{uni.name}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{uni.location}</div>
-                      <div style={{ fontSize: '0.8rem', marginTop: '8px', color: 'var(--accent-secondary)' }}>Programs: {uni.programs.join(', ')}</div>
-                      <button 
-                        onClick={() => setSelectedForApplication(prev => prev.filter(p => p.id !== uni.id))}
-                        style={{ position: 'absolute', top: '10px', right: '10px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                        title="Remove"
+
+            <div style={{ display: 'flex', justifyContent: 'center', borderBottom: '1px solid var(--glass-border)', marginBottom: '20px', gap: '30px', padding: '0 10px' }}>
+              <button 
+                type="button" 
+                onClick={() => setApplicationSubTab('apply')} 
+                style={{ background: 'none', border: 'none', padding: '10px 0', borderBottom: applicationSubTab === 'apply' ? '2px solid var(--accent-secondary)' : '2px solid transparent', color: applicationSubTab === 'apply' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' }}
+              >
+                Apply To Programs
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setApplicationSubTab('applied')} 
+                style={{ background: 'none', border: 'none', padding: '10px 0', borderBottom: applicationSubTab === 'applied' ? '2px solid var(--accent-secondary)' : '2px solid transparent', color: applicationSubTab === 'applied' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: 700, fontSize: '1.05rem', cursor: 'pointer', transition: 'all 0.2s', outline: 'none' }}
+              >
+                Selected Universities
+              </button>
+            </div>
+
+            {applicationSubTab === 'apply' && (
+              <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                <SearchProgram
+                  preselectedUnis={selectedForApplication}
+                  hideFooter={true}
+                  onSelectionChange={(uni, isSelected) => {
+                    if (isSelected) {
+                      setSelectedForApplication(prev => {
+                        const exists = prev.find(p => p.id === uni.id);
+                        if (exists) return prev;
+                        return [...prev, uni];
+                      });
+                    } else {
+                      setSelectedForApplication(prev => prev.filter(p => p.id !== uni.id));
+                    }
+                  }}
+                />
+
+                {/* Floating Action Buttons when Universities are selected */}
+                {selectedForApplication.length > 0 && (
+                  <div style={{ position: 'sticky', bottom: '20px', right: '0px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '15px', zIndex: 100, pointerEvents: 'none', marginTop: '-60px' }}>
+                     <button 
+                        type="button" 
+                        onClick={handleSaveProfile} 
+                        className="btn-save" 
+                        style={{ 
+                          pointerEvents: 'auto',
+                          padding: '12px 25px', 
+                          fontSize: '1rem', 
+                          margin: '0 0 20px 0', 
+                          background: 'var(--bg-secondary)', 
+                          color: 'var(--text-main)', 
+                          border: '1px solid var(--accent-secondary)',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderRadius: '12px'
+                        }}
                       >
-                        <X size={16} />
+                        <Save size={18} /> Save Profile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setApplicationSubTab('applied')}
+                        className="btn-save"
+                        style={{
+                          pointerEvents: 'auto',
+                          padding: '12px 30px',
+                          background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
+                          color: '#fff',
+                          border: 'none',
+                          fontSize: '1.05rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          margin: '0 20px 20px 0',
+                          boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.4)',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        Next <ArrowRight size={18} />
+                      </button>
+                  </div>
+                )}
+
+                {/* Actions fallback to bottom */}
+                {true && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px', marginTop: '30px', padding: '0 5px' }}>
+                    <button type="button" onClick={() => setActiveTab('documents')} className="btn-save" style={{ padding: '12px 20px', background: 'var(--bg-secondary)', color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}>
+                      Previous
+                    </button>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      {selectedForApplication.length === 0 && (
+                        <button type="button" onClick={handleSaveProfile} className="btn-save" style={{ padding: '12px 30px', fontSize: '1.05rem', margin: 0 }}>
+                          <Save size={18} /> Save Complete Profile
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {applicationSubTab === 'applied' && (
+              <div style={{ animation: 'fadeIn 0.3s ease' }}>
+                {selectedForApplication.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '50px 20px', textAlign: 'center', background: 'var(--card-bg-solid)', borderRadius: '16px', border: '1px dashed var(--glass-border)' }}>
+                    <Search className="text-muted" size={48} style={{ marginBottom: '15px', opacity: 0.5, margin: '0 auto' }} />
+                    <h3 style={{ color: 'var(--text-main)', margin: '0 0 10px 0', fontSize: '1.2rem', fontWeight: 800 }}>No Universities Selected</h3>
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>Switch to "Apply To Programs" to search and add target universities.</p>
+                  </div>
+                ) : (
+                  <div className="widget" style={{ marginBottom: '20px', background: 'var(--card-bg-solid)', border: '1px solid var(--accent-secondary)' }}>
+                    <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CheckSquare size={18} className="text-muted" /> Selected Universities for Application
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
+                      {selectedForApplication.map((uni, idx) => {
+                        const isExpanded = expandedUniIds.includes(uni.id);
+                        
+                        const stdKeys = ["id", "universityname", "name", "location", "type", "ranking", "percentage", "minpercentage", "programlevel", "level", "interestedfield", "subfield", "programname", "program", "rawsheetdata", "sno"];
+                        const otherCols = uni.rawSheetData ? Object.keys(uni.rawSheetData).filter(k => {
+                          const n = k.toLowerCase().replace(/[\s_.-]+/g, '');
+                          return !stdKeys.includes(n) && uni.rawSheetData[k] && uni.rawSheetData[k] !== "N/A" && uni.rawSheetData[k] !== "";
+                        }) : [];
+
+                        return (
+                          <div key={uni.id || idx} style={{ padding: '20px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--glass-border)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--text-main)', marginBottom: '5px', paddingRight: '25px', fontSize: '1.05rem' }}>{uni.name}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={14}/> {uni.location}</div>
+                            
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', background: 'rgba(59, 130, 246, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>Programs: {uni.programs.join(', ')}</span>
+                              {uni.level && uni.level !== "N/A" && <span style={{ fontSize: '0.8rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>{uni.level}</span>}
+                              {uni.minPercentage && uni.minPercentage !== "0" && <span style={{ fontSize: '0.8rem', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>Min {uni.minPercentage}%</span>}
+                            </div>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedForApplication(prev => prev.filter(p => p.id !== uni.id));
+                              }}
+                              style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(239, 68, 68, 0.1)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                              title="Remove University"
+                              className="hover:bg-red-500 hover:text-white"
+                            >
+                              <X size={16} />
+                            </button>
+
+                            {otherCols.length > 0 && (
+                              <div style={{ marginTop: 'auto', paddingTop: '15px' }}>
+                                <button 
+                                  onClick={() => setExpandedUniIds(prev => prev.includes(uni.id) ? prev.filter(id => id !== uni.id) : [...prev, uni.id])}
+                                  style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 0', transition: 'all 0.2s' }}
+                                >
+                                  {isExpanded ? <ChevronLeft size={16} style={{ transform: 'rotate(90deg)', transition: 'transform 0.2s' }} /> : <ChevronRight size={16} style={{ transform: 'rotate(0deg)', transition: 'transform 0.2s' }} />} 
+                                  {isExpanded ? 'Hide Details' : 'Show Details'}
+                                </button>
+                                
+                                {isExpanded && (
+                                  <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed var(--glass-border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', animation: 'fadeIn 0.3s ease' }}>
+                                    {otherCols.map(col => {
+                                      const isDeadline = col.toLowerCase().includes('deadline');
+                                      return (
+                                        <div key={col} style={{ fontSize: '0.85rem', background: isDeadline ? 'rgba(239, 68, 68, 0.05)' : 'var(--input-bg)', padding: '10px', borderRadius: '8px', border: isDeadline ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: isDeadline ? '#ef4444' : 'var(--text-muted)' }}>{col}</span>
+                                          <span style={{ color: isDeadline ? '#ef4444' : 'var(--text-main)', fontWeight: isDeadline ? 800 : 600 }}>{uni.rawSheetData[col]}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Actions for Selected Universities */}
+                {selectedForApplication.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px', padding: '10px 5px', marginTop: '10px', animation: 'fadeIn 0.3s ease' }}>
+                    <button type="button" onClick={() => setActiveTab('documents')} className="btn-save" style={{ padding: '12px 20px', background: 'var(--bg-secondary)', color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}>
+                      Previous
+                    </button>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                      <button type="button" onClick={handleSaveProfile} className="btn-save" style={{ padding: '12px 30px', fontSize: '1.05rem', margin: 0 }}>
+                        <Save size={18} /> Save Complete Profile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const docsInfo = documentUploadRef.current?.getAttachedFilesInfo() || [];
+                          if (docsInfo.length === 0) {
+                            setShowNoDocsError(true);
+                            setTimeout(() => setShowNoDocsError(false), 5000);
+                            return;
+                          }
+                          setShowNoDocsError(false);
+                          setHasAttachmentsWarning(false);
+                          const success = await handleSaveProfile();
+                          if (success) {
+                            setAttachedDocsPreview(docsInfo);
+                            setShowSummaryModal(true);
+                          }
+                        }}
+                        className="btn-save"
+                        style={{ padding: '12px 30px', background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', color: '#fff', border: 'none', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}
+                      >
+                        Review & Submit <ArrowRight size={18} />
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Action Buttons with Dynamic Positioning */}
-            {selectedForApplication.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '15px', marginBottom: '25px', padding: '0 5px', animation: 'fadeIn 0.3s ease' }}>
-                <button type="button" onClick={handleSaveProfile} className="btn-save" style={{ padding: '12px 30px', fontSize: '1.05rem', margin: 0 }}>
-                  <Save size={18} /> Save Complete Profile
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    if (selectedForApplication.length === 0) {
-                      setMessage("Please select at least one university to proceed.");
-                      setTimeout(() => setMessage(''), 4000);
-                      return;
-                    }
-                    setActiveTab('profile');
-                  }} 
-                  className="btn-save" 
-                  style={{ 
-                    padding: '12px 30px', 
-                    background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', 
-                    color: '#fff', 
-                    border: 'none',
-                    fontSize: '1.05rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    margin: 0
-                  }}
-                >
-                  Next <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
-
-            <SearchProgram 
-              preselectedUnis={selectedForApplication}
-              hideFooter={true}
-              onSelectionChange={(uni, isSelected) => {
-                if (isSelected) {
-                  setSelectedForApplication(prev => {
-                    const exists = prev.find(p => p.id === uni.id);
-                    if (exists) return prev;
-                    return [...prev, uni];
-                  });
-                } else {
-                  setSelectedForApplication(prev => prev.filter(p => p.id !== uni.id));
-                }
-              }}
-            />
-
-            {/* Actions fallback to bottom when no selection */}
-            {selectedForApplication.length === 0 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '15px', marginTop: '30px', padding: '0 5px' }}>
-                <button type="button" onClick={handleSaveProfile} className="btn-save" style={{ padding: '12px 30px', fontSize: '1.05rem', margin: 0 }}>
-                  <Save size={18} /> Save Complete Profile
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    if (selectedForApplication.length === 0) {
-                      setMessage("Please select at least one university to proceed.");
-                      setTimeout(() => setMessage(''), 4000);
-                      return;
-                    }
-                    setActiveTab('profile');
-                  }} 
-                  className="btn-save" 
-                  style={{ 
-                    padding: '12px 30px', 
-                    background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', 
-                    color: '#fff', 
-                    border: 'none',
-                    fontSize: '1.05rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    margin: 0,
-                    opacity: 0.7,
-                    cursor: 'not-allowed'
-                  }}
-                >
-                  Next <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
           </div>
-        )
-      }
-        {activeTab === 'documents' && (
+        </div>
+        <div style={{ display: activeTab === 'documents' ? 'block' : 'none' }}>
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
             {showNoDocsError && (
               <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', color: '#dc2626', padding: '12px 20px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 900, animation: 'shake 0.5s ease', display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
@@ -1200,16 +1310,16 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
                   <Save size={18} /> Save & Upload Documents
                 </button>
               </div>
-              <button type="button" disabled style={{ opacity: 0, pointerEvents: 'none', padding: '12px 20px' }}>Next</button>
+              <button type="button" onClick={() => setActiveTab('applications')} className="btn-save" style={{ padding: '12px 20px', background: 'var(--bg-secondary)', color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}>Next</button>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {isUploading && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, backdropFilter: 'blur(10px)' }}>
           <div style={{ width: '380px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '30px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 800 }}>{uploadProgress < 100 ? 'SECURELY PACKAGING DATA...' : 'TRANSMISSION COMPLETE!'}</div>
+            <div style={{ color: '#fff', marginBottom: '20px', fontSize: '1.25rem', fontWeight: 800 }}>{uploadProgress < 100 ? 'SUBMITTING...' : 'TRANSMISSION COMPLETE!'}</div>
             <div style={{ height: '12px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden', position: 'relative', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ height: '100%', background: 'linear-gradient(90deg, #38bdf8, #10b981)', width: `${uploadProgress}%`, transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }} />
             </div>
@@ -1227,7 +1337,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
                   <div style={{ display: 'flex', alignItems: 'center', gap: '25px', flex: 1 }}>
                     <h2 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.8rem', fontWeight: 900, whiteSpace: 'nowrap' }}>Final Review & Submission</h2>
                     <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 15px', borderRadius: '10px', color: '#f87171', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px', lineHeight: 1.4 }}>
-                      <AlertTriangle size={16} style={{ flexShrink: 0 }} /> 
+                      <AlertTriangle size={16} style={{ flexShrink: 0 }} />
                       <span><strong style={{ fontWeight: 800 }}>Attention:</strong> After submission, your profile and documents cannot be modified. Ensure all information is accurate before proceeding.</span>
                     </div>
                     {hasAttachmentsWarning && (
@@ -1365,7 +1475,7 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
                         setIsUploading(true);
                         setUploadProgress(5);
                         await documentUploadRef.current.executeProcessing((p) => setUploadProgress(p), { ...formData, appliedUniversities: selectedForApplication, studentId: student._id });
-                        
+
                         // The database is now updated atomically in the backend during executeProcessing
                         if (refreshProfile) refreshProfile();
 

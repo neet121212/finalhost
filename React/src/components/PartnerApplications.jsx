@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Building, MapPin, GraduationCap, FileText, User, Users, CheckCircle, Phone, CheckSquare, Filter } from 'lucide-react';
-import StudentDetails from './StudentDetails';
+import { 
+  Search, Building, MapPin, GraduationCap, FileText, User, 
+  CheckCircle, Phone, Filter, Mail, List, Calendar, Briefcase 
+} from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const PartnerApplications = ({ profile, setMessage }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState(''); // University search
+  const [studentSearchTerm, setStudentSearchTerm] = useState(''); // Student search
+  const [locationFilter, setLocationFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [counselorFilter, setCounselorFilter] = useState('');
 
   useEffect(() => {
     fetchStudents();
@@ -14,11 +23,8 @@ const PartnerApplications = ({ profile, setMessage }) => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/erp/students`, {
-        headers: {
-          'x-auth-token': token
-        }
+        credentials: 'include',
       });
       const data = await response.json();
       if (response.ok) {
@@ -33,181 +39,279 @@ const PartnerApplications = ({ profile, setMessage }) => {
     }
   };
 
-  // Extract all valid applications from all students
-  const allApplications = [];
-  students.forEach(student => {
-    const validApps = (student.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
-    validApps.forEach(app => {
-      // Determine label: Who is the primary counselor for this record?
-      let counselorLabel = 'Direct';
-      
-      if (student.createdByCounselor) {
-        counselorLabel = `${student.createdByCounselor.firstName} ${student.createdByCounselor.lastName || ''}`;
-      } else if (student.assignedCounselor) {
-        counselorLabel = `${student.assignedCounselor.firstName} ${student.assignedCounselor.lastName || ''}`;
-      }
+  // Extract and Normalize Applications
+  const allApplications = useMemo(() => {
+    const apps = [];
+    students.forEach(student => {
+      const validApps = (student.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
+      validApps.forEach(app => {
+        let counselorLabel = 'Direct';
+        if (student.createdByCounselor) {
+          counselorLabel = `${student.createdByCounselor.firstName} ${student.createdByCounselor.lastName || ''}`;
+        } else if (student.assignedCounselor) {
+          counselorLabel = `${student.assignedCounselor.firstName} ${student.assignedCounselor.lastName || ''}`;
+        }
 
-      allApplications.push({
-        ...app,
-        studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
-        studentEmail: student.email,
-        studentPhone: student.phone,
-        counselorName: counselorLabel,
+        apps.push({
+          ...app,
+          studentId: student._id,
+          studentName: `${student.firstName} ${student.lastName || ''}`.trim(),
+          studentEmail: student.email,
+          studentPhone: student.phone,
+          counselorName: counselorLabel,
+          appliedDate: student.updatedAt || student.createdAt || null
+        });
       });
     });
-  });
+    return apps.sort((a, b) => {
+      const dateA = a.appliedDate ? new Date(a.appliedDate).getTime() : 0;
+      const dateB = b.appliedDate ? new Date(b.appliedDate).getTime() : 0;
+      return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA);
+    });
+  }, [students]);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [studentSearchTerm, setStudentSearchTerm] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
+  const formatDate = (dateValue) => {
+    if (!dateValue) return 'N/A';
+    const d = new Date(dateValue);
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
-  const uniqueStudents = useMemo(() => {
-    return Array.from(new Set(allApplications.map(app => app.studentName).filter(Boolean))).sort();
-  }, [allApplications]);
-
-  const uniqueUniversities = useMemo(() => {
-    return Array.from(new Set(allApplications.map(app => app.name).filter(Boolean))).sort();
-  }, [allApplications]);
-
-  const uniqueLocations = useMemo(() => {
-    return Array.from(new Set(allApplications.map(app => app.location).filter(Boolean)));
-  }, [allApplications]);
-
-  const uniqueLevels = useMemo(() => {
-    return Array.from(new Set(allApplications.map(app => app.level).filter(Boolean)));
-  }, [allApplications]);
+  // Unique values for filters
+  const uniqueLocations = useMemo(() => [...new Set(allApplications.map(app => app.location).filter(Boolean))].sort(), [allApplications]);
+  const uniqueLevels = useMemo(() => [...new Set(allApplications.map(app => app.level).filter(Boolean))].sort(), [allApplications]);
+  const uniqueCounselors = useMemo(() => [...new Set(allApplications.map(app => app.counselorName).filter(Boolean))].sort(), [allApplications]);
 
   const filteredApplications = useMemo(() => {
     return allApplications.filter(app => {
-      if (searchTerm && app.name && !app.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      if (studentSearchTerm && app.studentName && !app.studentName.toLowerCase().includes(studentSearchTerm.toLowerCase())) return false;
-      if (locationFilter && app.location !== locationFilter) return false;
-      if (levelFilter && app.level !== levelFilter) return false;
-      return true;
+      const matchesUni = !searchTerm || app.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStudent = !studentSearchTerm || app.studentName?.toLowerCase().includes(studentSearchTerm.toLowerCase()) || app.studentEmail?.toLowerCase().includes(studentSearchTerm.toLowerCase());
+      const matchesLoc = !locationFilter || app.location === locationFilter;
+      const matchesLvl = !levelFilter || app.level === levelFilter;
+      const matchesCounselor = !counselorFilter || app.counselorName === counselorFilter;
+      
+      return matchesUni && matchesStudent && matchesLoc && matchesLvl && matchesCounselor;
     });
-  }, [allApplications, searchTerm, studentSearchTerm, locationFilter, levelFilter]);
+  }, [allApplications, searchTerm, studentSearchTerm, locationFilter, levelFilter, counselorFilter]);
+
+  const StatusBadge = ({ status = 'Finalized' }) => (
+    <span style={{ 
+      display: 'inline-flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      color: '#10b981', 
+      fontWeight: 600, 
+      background: 'rgba(16, 185, 129, 0.1)', 
+      padding: '4px 10px', 
+      borderRadius: '20px', 
+      fontSize: '0.75rem',
+      border: '1px solid rgba(16, 185, 129, 0.2)'
+    }}>
+      <CheckCircle size={12} /> {status}
+    </span>
+  );
 
   return (
-    <div className="view-standard" style={{ animation: 'fadeIn 0.3s ease' }}>
-      <header className="dash-header">
+    <div className="view-standard" style={{ animation: 'fadeIn 0.4s ease-out' }}>
+      <header className="dash-header" style={{ marginBottom: '10px' }}>
         <div>
-          <h1>Applied Applications</h1>
-          <p>Master ledger of all university applications submitted by students under your management.</p>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <List className="text-accent" /> Applied Applications
+          </h1>
+          <p>Consolidated ledger of student university filings and counselor submissions.</p>
         </div>
       </header>
 
+      {/* ENHANCED FILTER BAR */}
+      <div className="widget" style={{ padding: '20px', marginBottom: '5px', background: 'var(--card-bg-solid)', border: '1px solid var(--glass-border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
+          
+          <div className="dash-input-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><User size={12} /> Search Student</label>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                className="theme-input" 
+                placeholder="Name or Email..." 
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                style={{ paddingLeft: '35px' }}
+              />
+            </div>
+          </div>
+
+          <div className="dash-input-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Building size={12} /> University</label>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                className="theme-input" 
+                placeholder="University Name..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ paddingLeft: '35px' }}
+              />
+            </div>
+          </div>
+
+          <div className="dash-input-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><MapPin size={12} /> Region</label>
+            <select className="theme-input" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+              <option value="">All Regions</option>
+              {uniqueLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+            </select>
+          </div>
+
+          <div className="dash-input-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><GraduationCap size={12} /> Level</label>
+            <select className="theme-input" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+              <option value="">All Levels</option>
+              {uniqueLevels.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+            </select>
+          </div>
+
+          <div className="dash-input-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Briefcase size={12} /> Submitted By</label>
+            <select className="theme-input" value={counselorFilter} onChange={(e) => setCounselorFilter(e.target.value)}>
+              <option value="">All Counselors</option>
+              {uniqueCounselors.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+        </div>
+      </div>
+
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+        <div className="widget" style={{ textAlign: 'center', padding: '60px' }}>
           <div className="loader" style={{ margin: '0 auto 20px auto' }}></div>
-          <p>Loading application ledger...</p>
+          <p style={{ color: 'var(--text-muted)' }}>Syncing application data...</p>
         </div>
       ) : allApplications.length === 0 ? (
-        <div className="widget placeholder-panel mt-4">
-          <div className="empty-state" style={{ padding: '40px', textAlign: 'center' }}>
-            <FileText size={48} style={{ color: 'var(--glass-border)', margin: '0 auto 15px auto' }} />
-            <h3 style={{ color: 'var(--text-main)', marginBottom: '8px' }}>No Applications Filed</h3>
-            <p style={{ color: 'var(--text-muted)' }}>None of your managed students have finalized university applications yet.</p>
-          </div>
+        <div className="widget empty-state" style={{ padding: '60px', textAlign: 'center' }}>
+          <FileText size={48} style={{ color: 'var(--glass-border)', marginBottom: '20px' }} />
+          <h3>No Records Found</h3>
+          <p>Your managed students haven't filed any applications yet.</p>
         </div>
       ) : (
-        <>
-          <div className="widget" style={{ marginBottom: '20px', padding: '20px' }}>
-            <h3 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', color: 'var(--text-main)' }}>
-              <Filter size={18} /> Filter Ledger
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-              <div style={{ position: 'relative' }}>
-                <Building size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <select className="theme-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ paddingLeft: '35px', width: '100%', boxSizing: 'border-box' }}>
-                  <option value="">All Universities</option>
-                  {uniqueUniversities.map(name => <option key={name} value={name}>{name}</option>)}
-                </select>
-              </div>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <select className="theme-input" value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} style={{ paddingLeft: '35px', width: '100%', boxSizing: 'border-box' }}>
-                  <option value="">All Students</option>
-                  {uniqueStudents.map(name => <option key={name} value={name}>{name}</option>)}
-                </select>
-              </div>
-              <select className="theme-input" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} style={{ width: '100%' }}>
-                <option value="">All Locations</option>
-                {uniqueLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-              </select>
-              <select className="theme-input" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} style={{ width: '100%' }}>
-                <option value="">All Levels</option>
-                {uniqueLevels.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
-              </select>
-            </div>
-            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn-save" onClick={(e) => e.preventDefault()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 25px', width: 'auto' }}>
-                <Search size={16} /> 
-                Apply Filters
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {filteredApplications.length === 0 ? (
-              <div className="empty-state" style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                No applications match your filter criteria.
-              </div>
-            ) : (
-              filteredApplications.map((app, idx) => (
-                <div key={idx} className="widget hover:border-[var(--accent-secondary)]" style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', border: '1px solid var(--glass-border)', transition: 'all 0.2s ease', background: 'var(--bg-secondary)' }}>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
-                    <div style={{ flex: '1 1 auto' }}>
-                      <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Building size={20} className="text-muted" /> {app.name}
-                      </h4>
-                      <div style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '10px', flexWrap: 'wrap' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14} /> {app.location && app.location !== 'null' && app.location !== 'Unknown' ? app.location : 'Region Not Specified'}</span>
-                        {app.minPercentage && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><GraduationCap size={14} /> Min. {app.minPercentage < 1 ? Math.round(app.minPercentage * 100) : app.minPercentage}%</span>}
-                        {app.level && <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px' }}>{app.level === 'null' || !app.level ? 'Degree' : app.level}</span>}
-                      </div>
-
-                      <div style={{ marginTop: '15px', display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600 }}>
-                            <User size={16} className="text-muted" /> {app.studentName}
-                         </div>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                            <Phone size={14} className="text-muted" /> {app.studentPhone}
-                         </div>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem', borderLeft: '1px solid var(--glass-border)', paddingLeft: '10px' }}>
-                            Submitted By: <span style={{ color: 'var(--text-main)', fontWeight: 500, background: 'var(--glass-bg)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--accent-secondary)' }}>{app.counselorName}</span>
-                         </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 600, background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        <CheckSquare size={14} /> Finalized
-                      </span>
-                    </div>
-                  </div>
-
-                  {app.programs && app.programs.length > 0 && (
-                    <div style={{ marginTop: '5px', paddingTop: '15px', borderTop: '1px dashed var(--glass-border)' }}>
-                      <h5 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applied Programs</h5>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                        {app.programs.map((prog, pIdx) => (
-                          <div key={pIdx} style={{ background: 'var(--input-bg)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                            <CheckSquare size={14} className="text-muted" />
-                            {prog}
+        <div className="widget" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--glass-border)', background: 'transparent' }}>
+          <div className="data-table-wrapper" style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+            <table className="data-table" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg-tertiary)' }}>
+                <tr>
+                  <th style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>Student Details</th>
+                  <th style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>University & Region</th>
+                  <th style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>Applied Programs</th>
+                  <th style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>Submission Info</th>
+                  <th style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', textAlign: 'right' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApplications.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No applications match your current filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredApplications.map((app, idx) => (
+                    <tr key={idx} style={{ 
+                      transition: 'background 0.2s', 
+                      background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                      cursor: 'default'
+                    }} className="hover-row">
+                      <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{app.studentName}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={12} /> {app.studentEmail}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={12} /> {app.studentPhone}</span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              ))
-            )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--accent-secondary)', fontSize: '0.9rem' }}>{app.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> {app.location || 'N/A'}</span>
+                            <span style={{ background: 'rgba(255,255,255,0.05)', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--glass-border)' }}>{app.level || 'Degree'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {app.programs && app.programs.length > 0 ? (
+                            app.programs.map((p, pIdx) => (
+                              <span key={pIdx} style={{ 
+                                fontSize: '0.75rem', 
+                                background: 'var(--bg-secondary)', 
+                                padding: '3px 8px', 
+                                borderRadius: '6px', 
+                                border: '1px solid var(--glass-border)',
+                                color: 'var(--text-main)'
+                              }}>
+                                {p}
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Course General</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>{app.counselorName}</span>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={12} /> {formatDate(app.appliedDate)}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)', textAlign: 'right' }}>
+                        <StatusBadge />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </>
+          <div style={{ padding: '15px 20px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Showing <strong>{filteredApplications.length}</strong> of <strong>{allApplications.length}</strong> applications
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-filter" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => {
+                  setSearchTerm(''); setStudentSearchTerm(''); setLocationFilter(''); setLevelFilter(''); setCounselorFilter('');
+                }}>Reset All Filters</button>
+            </div>
+          </div>
+        </div>
       )}
+
+      <style>{`
+        .hover-row:hover {
+          background: rgba(255, 255, 255, 0.03) !important;
+        }
+        .text-accent {
+          color: var(--accent-secondary);
+        }
+        .data-table-wrapper::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .data-table-wrapper::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .data-table-wrapper::-webkit-scrollbar-thumb {
+          background: var(--glass-border);
+          border-radius: 10px;
+        }
+        .data-table-wrapper::-webkit-scrollbar-thumb:hover {
+          background: var(--text-muted);
+        }
+      `}</style>
     </div>
   );
 };

@@ -3,10 +3,10 @@ import { Search, MapPin, Building, GraduationCap, ExternalLink, Filter, Database
 import Select from 'react-select';
 import * as XLSX from 'xlsx';
 
-// ==========================================
-// PASTE YOUR GOOGLE APP SCRIPT WEB APP URL BELOW
-// ==========================================
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydE8Mw77TYC_e9vMYxWEXTLZvZQRfstl3eNgp3G1bCHyNw-hScNVpCuUx_6VPevDwIZw/exec";
+// Removed the direct Google Apps Script URL for security
+// Data is now fetched natively through the backend proxy
+
+import { API_BASE_URL } from '../config';
 
 // Fallback sample data structured like what the Google Sheet would return
 const sampleSheetData = [
@@ -84,15 +84,13 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
   // Fetch data from Google Sheet App Script
   useEffect(() => {
     const fetchData = async () => {
-      if (APP_SCRIPT_URL === "INSERT_YOUR_GOOGLE_APP_SCRIPT_URL_HERE" || !APP_SCRIPT_URL) {
-        setUniversitiesData(sampleSheetData);
-        return;
-      }
-
       setIsLoading(true);
       try {
-        const response = await fetch(APP_SCRIPT_URL);
-        if (!response.ok) throw new Error("Failed to fetch data from App Script");
+        const response = await fetch(`${API_BASE_URL}/sheets`, {
+      credentials: 'include',
+
+        });
+        if (!response.ok) throw new Error("Failed to fetch data from backend proxy");
         const data = await response.json();
 
         // ensure IDs exist for selection logic
@@ -346,7 +344,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
         name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
         location: getFieldValue(uni, ['location']) || "Unknown Location",
         level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
-        minPercentage: getFieldValue(uni, ['percentage']) || 0,
+        minPercentage: (() => {
+          const raw = getFieldValue(uni, ['percentage']) || "0";
+          if (typeof raw === 'string' && raw.includes('%')) return parseFloat(raw.replace('%', ''));
+          const n = parseFloat(raw);
+          return isNaN(n) ? 0 : (n < 1 ? Math.round(n * 100) : n);
+        })(),
         type: getFieldValue(uni, ['type']) || "N/A",
         ranking: getFieldValue(uni, ['ranking']) || "N/A",
         programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"],
@@ -371,7 +374,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
             name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
             location: getFieldValue(uni, ['location']) || "Unknown Location",
             level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
-            minPercentage: getFieldValue(uni, ['percentage']) || 0,
+            minPercentage: (() => {
+              const raw = getFieldValue(uni, ['percentage']) || "0";
+              if (typeof raw === 'string' && raw.includes('%')) return parseFloat(raw.replace('%', ''));
+              const n = parseFloat(raw);
+              return isNaN(n) ? 0 : (n < 1 ? Math.round(n * 100) : n);
+            })(),
             type: getFieldValue(uni, ['type']) || "N/A",
             ranking: getFieldValue(uni, ['ranking']) || "N/A",
             programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"],
@@ -405,7 +413,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
             name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
             location: getFieldValue(uni, ['location']) || "Unknown Location",
             level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
-            minPercentage: getFieldValue(uni, ['percentage']) || 0,
+            minPercentage: (() => {
+              const raw = getFieldValue(uni, ['percentage']) || "0";
+              if (typeof raw === 'string' && raw.includes('%')) return parseFloat(raw.replace('%', ''));
+              const n = parseFloat(raw);
+              return isNaN(n) ? 0 : (n < 1 ? Math.round(n * 100) : n);
+            })(),
             type: getFieldValue(uni, ['type']) || "N/A",
             ranking: getFieldValue(uni, ['ranking']) || "N/A",
             programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"],
@@ -433,7 +446,12 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
         name: getFieldValue(uni, ['universityname', 'name']) || "Unknown University",
         location: getFieldValue(uni, ['location']) || "Unknown Location",
         level: getFieldValue(uni, ['programlevel', 'level']) || "N/A",
-        minPercentage: getFieldValue(uni, ['percentage']) || 0,
+        minPercentage: (() => {
+          const raw = getFieldValue(uni, ['percentage']) || "0";
+          if (typeof raw === 'string' && raw.includes('%')) return parseFloat(raw.replace('%', ''));
+          const n = parseFloat(raw);
+          return isNaN(n) ? 0 : (n < 1 ? Math.round(n * 100) : n);
+        })(),
         type: getFieldValue(uni, ['type']) || "N/A",
         ranking: getFieldValue(uni, ['ranking']) || "N/A",
         programs: [getFieldValue(uni, ['programname', 'program']) || "Unknown Program"],
@@ -501,11 +519,6 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
           <h1>Search Program Interface</h1>
           <p>Explore programs</p>
         </div>
-        {APP_SCRIPT_URL === "INSERT_YOUR_GOOGLE_APP_SCRIPT_URL_HERE" && (
-          <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid #f59e0b', color: '#f59e0b', padding: '8px 15px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Database size={16} /> Using Mock Data. Please insert your App Script URL in SearchProgram.jsx.
-          </div>
-        )}
       </header>
 
       {error && (
@@ -670,13 +683,10 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
 
               let displayPercentage = reqPercentage;
               if (reqPercentage && reqPercentage !== "0") {
-                if (typeof reqPercentage === 'string' && reqPercentage.includes('%')) {
-                  displayPercentage = parseFloat(reqPercentage.replace('%', '')).toString();
-                } else {
-                  const rawNum = parseFloat(reqPercentage);
-                  if (!isNaN(rawNum)) {
-                    displayPercentage = (rawNum < 1 ? Math.round(rawNum * 100) : rawNum).toString();
-                  }
+                const rawStr = String(reqPercentage).replace('%', '').trim();
+                const rawNum = parseFloat(rawStr);
+                if (!isNaN(rawNum)) {
+                  displayPercentage = (rawNum < 1 ? Math.round(rawNum * 100) : rawNum).toString();
                 }
               }
 

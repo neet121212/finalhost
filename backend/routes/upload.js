@@ -4,12 +4,18 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const Application = require('../models/Application');
+const auth = require('../middleware/auth');
 
 // Set up Multer for memory storage (no files saved to disk)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// Apply 10MB security limit to prevent Memory DoS attacks
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 } 
+});
 
-router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
+// Added auth middleware to close open route vulnerability
+router.post('/email-zip', auth, upload.single('zipFile'), async (req, res) => {
     try {
         const { email, candidateName, summaryData } = req.body;
         const zipFile = req.file;
@@ -173,6 +179,9 @@ router.post('/email-zip', upload.single('zipFile'), async (req, res) => {
                                 studentUser.applications = [...(studentUser.applications || []), ...newAppIds];
                                 console.log(`[Upload] Created ${newAppIds.length} new formal Application records.`);
                             }
+                            
+                            // Reset the cart now that applications are finalized
+                            studentUser.savedUniversitiesCart = [];
                             
                             await studentUser.save();
                             console.log(`[Upload] Successfully saved ${incomingValid.length} applied universities to database for student ID ${data.studentId}`);

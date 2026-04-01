@@ -1,14 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const checkRole = require('../middleware/rbac');
 const User = require('../models/User');
 const Counselor = require('../models/Counselor');
 const Application = require('../models/Application');
 
+// ERP routes use authentication
+router.use(auth);
+
 // =======================
 // DASHBOARD STATS
 // =======================
-router.get('/stats', auth, async (req, res) => {
+router.get('/stats', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
     let studentQuery = { role: 'student' };
@@ -52,7 +56,7 @@ router.get('/stats', auth, async (req, res) => {
 // COUNSELORS CRUD
 // =======================
 // Get all counselors under a partner
-router.get('/counselors', auth, async (req, res) => {
+router.get('/counselors', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
     let query = { role: 'counselor' };
@@ -73,7 +77,7 @@ router.get('/counselors', auth, async (req, res) => {
 });
 
 // Add new counselor
-router.post('/counselors', auth, async (req, res) => {
+router.post('/counselors', checkRole(['admin', 'partner']), async (req, res) => {
   try {
     const { name, email, phone, speciality, password, targetPartnerId } = req.body;
     
@@ -119,7 +123,7 @@ router.post('/counselors', auth, async (req, res) => {
 });
 
 // Delete counselor
-router.delete('/counselors/:id', auth, async (req, res) => {
+router.delete('/counselors/:id', checkRole(['admin', 'partner']), async (req, res) => {
   try {
     const counselor = await User.findOne({ _id: req.params.id, role: 'counselor' });
     if (!counselor) return res.status(404).json({ error: "Counselor not found" });
@@ -143,7 +147,7 @@ router.delete('/counselors/:id', auth, async (req, res) => {
 });
 
 // Update counselor
-router.put('/counselors/:id', auth, async (req, res) => {
+router.put('/counselors/:id', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
     let updateData = {};
@@ -181,7 +185,7 @@ router.put('/counselors/:id', auth, async (req, res) => {
 // STUDENTS MANAGEMENT
 // =======================
 // Get all students (with active filters via query param)
-router.get('/students', auth, async (req, res) => {
+router.get('/students', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const currentUser = await User.findById(req.user.id);
     const { country, state, isAssigned } = req.query;
@@ -221,7 +225,7 @@ router.get('/students', auth, async (req, res) => {
 });
 
 // Partner OR Counselor Register New Student Lead
-router.post('/students', auth, async (req, res) => {
+router.post('/students', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const { firstName, lastName, email, phone, country, state, city, offerStatus, assignedCounselor } = req.body;
     
@@ -273,7 +277,7 @@ router.post('/students', auth, async (req, res) => {
 });
 
 // Edit Student
-router.put('/students/:id', auth, async (req, res) => {
+router.put('/students/:id', async (req, res) => {
   try {
     const updates = req.body;
     const student = await User.findById(req.params.id);
@@ -281,6 +285,12 @@ router.put('/students/:id', auth, async (req, res) => {
     if (!student || student.role !== 'student') {
       return res.status(404).json({ error: "Student not found" });
     }
+
+    // Role-based authorization
+    if (req.user.role === 'student' && req.user.id !== req.params.id) {
+       return res.status(403).json({ error: "Unauthorized access: You can only edit your own profile." });
+    }
+
 
     // Check email uniqueness if email is changed
     if (updates.email && updates.email !== student.email) {
@@ -296,7 +306,7 @@ router.put('/students/:id', auth, async (req, res) => {
       'passportNo', 'issueDate', 'expiryDate', 'issueCountry', 'issueState', 'issueCity',
       'nationality', 'citizenship', 'multiCitizen', 'livingInOtherCountry', 'otherNationality', 'otherLivingCountry',
       'altContactName', 'altContactPhone', 'altContactEmail', 'altContactRelation',
-      'countryOfEducation', 'highestLevelOfEducation', 'educationHistory', 'workExperience', 'appliedUniversities'
+      'countryOfEducation', 'highestLevelOfEducation', 'educationHistory', 'workExperience', 'appliedUniversities', 'savedUniversitiesCart'
     ];
 
     allowedFields.forEach(field => {
@@ -314,7 +324,7 @@ router.put('/students/:id', auth, async (req, res) => {
 });
 
 // Delete Student
-router.delete('/students/:id', auth, async (req, res) => {
+router.delete('/students/:id', checkRole(['admin', 'partner']), async (req, res) => {
   try {
     const student = await User.findOneAndDelete({ _id: req.params.id, role: 'student' });
     if (!student) return res.status(404).json({ error: "Student not found" });
@@ -330,12 +340,12 @@ router.delete('/students/:id', auth, async (req, res) => {
 });
 
 // Assign Counselor to Student
-router.put('/students/:id/assign', auth, async (req, res) => {
+router.put('/students/:id/assign', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
     const { counselorId } = req.body;
-    // Check if counselor exists
+    // Check if counselor exists in the User collection
     if (counselorId) {
-      const counselor = await Counselor.findById(counselorId);
+      const counselor = await User.findOne({ _id: counselorId, role: 'counselor' });
       if (!counselor) return res.status(404).json({ error: "Counselor not found" });
     }
 

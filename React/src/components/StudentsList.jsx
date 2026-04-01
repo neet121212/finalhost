@@ -77,8 +77,8 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
   const fetchCounselors = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/erp/counselors`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+      credentials: 'include',
+        });
       if (res.ok) setCounselors(await res.json());
     } catch (err) {}
   };
@@ -88,8 +88,8 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
     try {
       const query = new URLSearchParams(filters).toString();
       const res = await fetch(`${API_BASE_URL}/erp/students?${query}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+      credentials: 'include',
+        });
       if (res.ok) setStudents(await res.json());
     } catch (err) { }
     setLoading(false);
@@ -107,8 +107,9 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
     const counselorId = selectedOption ? selectedOption.value : '';
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}/assign`, {
+      credentials: 'include',
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
+        headers: { 'Content-Type': 'application/json', },
         body: JSON.stringify({ counselorId })
       });
       if (res.ok) {
@@ -123,8 +124,9 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
     const offerStatus = selectedOption ? selectedOption.value : 'Pending';
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}`, {
+      credentials: 'include',
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
+        headers: { 'Content-Type': 'application/json', },
         body: JSON.stringify({ offerStatus })
       });
       if (res.ok) {
@@ -139,8 +141,9 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
     const studentStatus = selectedOption ? selectedOption.value : 'Active';
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${studentId}`, {
+      credentials: 'include',
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
+        headers: { 'Content-Type': 'application/json', },
         body: JSON.stringify({ studentStatus })
       });
       if (res.ok) {
@@ -167,8 +170,9 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
   const handleSaveEdit = async (id) => {
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${id}`, {
+      credentials: 'include',
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') },
+        headers: { 'Content-Type': 'application/json', },
         body: JSON.stringify(editFormData)
       });
       if (res.ok) {
@@ -189,9 +193,9 @@ const StudentsList = ({ profile, setMessage, pendingApplications, setPendingAppl
     if (!window.confirm("Are you sure you want to remove this student?")) return;
     try {
       const res = await fetch(`${API_BASE_URL}/erp/students/${id}`, {
+      credentials: 'include',
         method: 'DELETE',
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+        });
       if (res.ok) {
         if(setMessage) setMessage({text: 'Student removed successfully.', type: 'success'});
         fetchStudents();

@@ -304,6 +304,7 @@ const DocumentUpload = forwardRef(({ profile, setMessage }, ref) => {
             setMessage('Generating ZIP and sending email...');
 
             const response = await fetch(`${API_BASE_URL}/upload/email-zip`, {
+      credentials: 'include',
                 method: 'POST',
                 body: formData
             });

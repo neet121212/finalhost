@@ -16,8 +16,8 @@ const RegisterStudent = ({ profile, setMessage }) => {
   const fetchCounselors = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/erp/counselors`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+      credentials: 'include',
+        });
       if (res.ok) setCounselors(await res.json());
     } catch (err) {}
   };
@@ -101,11 +101,11 @@ const RegisterStudent = ({ profile, setMessage }) => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/erp/students`, {
+      credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token')
-        },
+          },
         body: JSON.stringify(payload)
       });
 

@@ -68,8 +68,8 @@ const Dashboard = () => {
   const fetchStats = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/erp/stats`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+      credentials: 'include',
+        });
       if (response.ok) {
         setStats(await response.json());
       }
@@ -85,13 +85,10 @@ const Dashboard = () => {
   }, [profile]);
 
   const fetchProfile = async () => {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          'x-auth-token': token
-        }
-      });
+      credentials: 'include',
+        });
       if (response.ok) {
         const data = await response.json();
         if (data.role === 'admin') {
@@ -108,9 +105,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    sessionStorage.removeItem('token');
+  const handleLogout = async () => {
+    await fetch(`${API_BASE_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(()=>{});
     localStorage.removeItem('keepSignedIn');
     navigate('/');
   };
@@ -122,14 +118,13 @@ const Dashboard = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     setMessage({ text: 'Updating Profile...', type: 'info' });
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     try {
       const response = await fetch(`${API_BASE_URL}/auth/update`, {
+      credentials: 'include',
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-auth-token': token
-        },
+          },
         body: JSON.stringify({
           firstName: formData.firstName,
           email: formData.email,

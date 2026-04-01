@@ -107,11 +107,27 @@ const UserSchema = new mongoose.Schema({
     minPercentage: Number,
     type: String,
     ranking: String,
-    programs: [String]
+    programs: [String],
+    rawSheetData: mongoose.Schema.Types.Mixed
+  }, { _id: false })],
+  savedUniversitiesCart: [new mongoose.Schema({
+    id: mongoose.Schema.Types.Mixed,
+    name: String,
+    location: String,
+    level: String,
+    minPercentage: Number,
+    type: String,
+    ranking: String,
+    programs: [String],
+    rawSheetData: mongoose.Schema.Types.Mixed
   }, { _id: false })],
   // New Field for Tracking
   offerStatus: { type: String, enum: ['Pending', 'Received'], default: 'Pending' },
-  studentStatus: { type: String, enum: ['Active', 'Backout', 'On Hold'], default: 'Active' }
+  studentStatus: { type: String, enum: ['Active', 'Backout', 'On Hold'], default: 'Active' },
+  
+  // Security & Lockout Mechanisms
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil: { type: Date }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

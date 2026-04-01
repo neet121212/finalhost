@@ -29,8 +29,8 @@ const ManageCounselors = ({ setMessage, targetPartnerId }) => {
     try {
       const url = targetPartnerId ? `${API_BASE_URL}/erp/counselors?partnerId=${targetPartnerId}` : `${API_BASE_URL}/erp/counselors`;
       const response = await fetch(url, {
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+      credentials: 'include',
+        });
       if (response.ok) {
         const data = await response.json();
         setCounselors(data);
@@ -102,11 +102,11 @@ const ManageCounselors = ({ setMessage, targetPartnerId }) => {
       if (editingId && !formData.password) delete payload.password; // Don't send empty password if editing
 
       const response = await fetch(url, {
+      credentials: 'include',
         method,
         headers: { 
           'Content-Type': 'application/json',
-          'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token')
-        },
+          },
         body: JSON.stringify(payload)
       });
       if (response.ok) {
@@ -139,9 +139,9 @@ const ManageCounselors = ({ setMessage, targetPartnerId }) => {
     if (!window.confirm("Remove counselor?")) return;
     try {
       const response = await fetch(`${API_BASE_URL}/erp/counselors/${id}`, {
+      credentials: 'include',
         method: 'DELETE',
-        headers: { 'x-auth-token': localStorage.getItem('token') || sessionStorage.getItem('token') }
-      });
+        });
       if (response.ok) {
         setMessage({ text: 'Counselor removed successfully.', type: 'success' });
         fetchCounselors();

@@ -6,8 +6,8 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Launch in light mode by default
-    return 'light';
+    // Sync with user's system preference by default
+    return localStorage.getItem('app-theme') || 'system';
   });
 
   const [activeTheme, setActiveTheme] = useState('light'); // 'light' or 'dark'
